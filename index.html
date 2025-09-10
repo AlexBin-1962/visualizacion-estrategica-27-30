@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Redirigiendo…</title>
+  <meta http-equiv="refresh" content="0; url=estrategico/portal.html">
+  <meta name="robots" content="noindex">
+  <script>
+    // Preserva querystring y hash (por si algún día los usas)
+    (function () {
+      var target = 'estrategico/portal.html' + location.search + location.hash;
+      // replace() evita dejar este index en el historial
+      location.replace(target);
+    })();
+  </script>
+</head>
+<body>
+  <noscript>
+    <p>Redirigiendo a <a href="estrategico/portal.html">estrategico/portal.html</a>…</p>
+  </noscript>
+</body>
+</html>

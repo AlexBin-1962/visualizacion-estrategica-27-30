@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AT · Portal</title>
+  <link rel="stylesheet" href="assets/css/base.css"/>
+  <!-- ===================== -->
+  <!-- Estilos internos CSS -->
+  <!-- ===================== -->
+  <style>
+    :root {
+      --stroke: #e6eaf2;
+      --muted: #5f6b82;
+      --primary: #2563eb; /* Azul principal */
+      --accent: #3b82f6;  /* Azul acento */
+      --bg: #f4f6fb;     /* Fondo página gris claro */
+      --card-bg: #fff;   /* Fondo tarjetas blanco */
+      --shadow: 0 10px 36px rgba(0,0,0,.08);
+      --radius: 18px;
+      --transition: 0.2s cubic-bezier(.4,0,.2,1);
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+      background: var(--bg);
+      color: #222;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px 20px 24px;
+      margin-bottom: 24px;
+      transition: box-shadow var(--transition);
+    }
+    .card:hover {
+      box-shadow: 0 16px 48px rgba(0,0,0,.12);
+    }
+    h2 {
+      margin: 0 0 1.2rem 0;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.5px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12,1fr);
+      gap: 18px;
+    }
+    .row {
+      grid-column: span 12;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    @media(min-width:860px){ .row.span4{grid-column:span 4} .row.span6{grid-column:span 6} }
+    label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    select, input {
+      padding: 12px;
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      font-size: 15px;
+      background: #f3f6fa;
+      transition: border-color var(--transition);
+    }
+    select:focus, input:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+    .hint {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    .btn {
+      background: var(--card-bg);
+      cursor: pointer;
+      box-shadow: 0 6px 24px rgba(0,0,0,.07);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      padding: 10px 22px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--primary);
+      transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+    }
+    .btn:hover {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 8px 32px rgba(59,130,246,.15);
+    }
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .primary:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+    /* Módulos */
+    .modgrid {
+      display: grid;
+      grid-template-columns: repeat(12,1fr);
+      gap: 20px;
+      margin-top: 28px;
+    }
+    .modcard {
+      grid-column: span 12;
+      background: var(--card-bg);
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      padding: 22px 18px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 8px 32px rgba(0,0,0,.09);
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .modcard:hover {
+      box-shadow: 0 16px 48px rgba(33,208,122,.12);
+      transform: translateY(-2px) scale(1.01);
+    }
+    @media(min-width:760px){.modcard{grid-column:span 6}} @media(min-width:1040px){.modcard{grid-column:span 4}}
+    .modhead {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .modico {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,.10);
+    }
+    .i-analisis{background:#0eb4ff}
+    .i-ganar{background:#21d07a}
+    .i-campo{background:#df7bc1}
+    .i-estr{background:#f59e0b}
+    .i-diad{background:#a78bfa}
+    .modtitle {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary);
+    }
+    .moddesc {
+      font-size: 14px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .modcard.disabled {
+      opacity: .45;
+      filter: grayscale(.08);
+      pointer-events: none;
+    }
+    .mod-btn[disabled]{opacity:.5;cursor:not-allowed}
+    .disabled{opacity:.6;pointer-events:none}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <!-- =============================== -->
+    <!-- Sección: Filtros de selección  -->
+    <!-- =============================== -->
+    <div class="card">
+      <h2>Selecciona el universo (elige <b>solo uno</b>)</h2>
+
+      <div class="grid">
+          <!-- Filtro: Municipio -->
+          <div class="row span4">
+            <label>Municipio</label>
+            <select id="sel-mun"><option value="">— Ninguno —</option></select>
+          </div>
+          <!-- Filtro: Distrito Federal -->
+          <div class="row span4">
+            <label>Distrito Federal</label>
+            <select id="sel-df"><option value="">— Ninguno —</option></select>
+          </div>
+          <!-- Filtro: Distrito Local -->
+          <div class="row span4">
+            <label>Distrito Local</label>
+            <select id="sel-dl"><option value="">— Ninguno —</option></select>
+          </div>
+
+          <!-- Checkbox: Estado completo -->
+          <div class="row span12">
+            <label><input type="checkbox" id="all-state"/> Estado completo (todas las secciones)</label>
+            <div class="hint">Ignora Municipio/DF/DL y muestra todas las secciones del estado.</div>
+          </div>
+
+          <!-- Resumen del universo seleccionado -->
+          <div class="row span12">
+            <div id="u-sum" class="hint">Universo: —</div>
+          </div>
+
+          <!-- Inputs: Rutas de archivos -->
+          <div class="row span6">
+            <label>GeoJSON</label>
+            <input id="geo" value="data/geo/secciones.geojson"/>
+          </div>
+          <div class="row span6">
+            <label>Catálogo territorial (nombres)</label>
+            <input id="catalog" value="data/catalogo_territorial.json"/>
+          </div>
+
+          <!-- Acciones (botones) -->
+          <div class="row span12 actions">
+            <!--<button class="btn" id="load">Cargar opciones</button>-->
+            <!--<button class="btn primary" id="open">Abrir Análisis Territorial</button>-->
+          </div>
+        </div>
+      </div>
+
+  <!-- =============================== -->
+  <!-- Sección: Tarjetas de módulos   -->
+  <!-- =============================== -->
+  <!-- Tarjetas de módulos: DESHABILITADAS hasta "Cargar opciones" -->
+  <section id="mods" class="modgrid">
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-analisis">📊</div>
+          <div><div class="modtitle">Análisis Territorial</div><div class="moddesc">Mapas, comparativas y consultas.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('analisis_territorial.html','_self')">Abrir</button>
+      </div>
+
+        <!-- Tarjeta: Social -->
+        <div class="modcard disabled">
+          <div class="modhead">
+            <div class="modico i-social" style="background:#3b82f6">💬</div>
+            <div>
+              <div class="modtitle">Social</div>
+              <div class="moddesc">Redes, interacción y comunicación.</div>
+            </div>
+          </div>
+    <button class="btn mod-btn" onclick="window.open('social.html','_self')">Abrir</button>
+        </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-ganar">🏆</div>
+          <div><div class="modtitle">Ganar Todo</div><div class="moddesc">Brechas, metas, priorización.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('ganar_todo.html','_self')">Abrir</button>
+      </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-campo">🗺️</div>
+          <div><div class="modtitle">Campo</div><div class="moddesc">Levantamientos y control.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('campo.html','_self')">Abrir</button>
+      </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-estr">👥</div>
+          <div><div class="modtitle">Estructura</div><div class="moddesc">Representantes y crecimiento.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('estructura.html','_self')">Abrir</button>
+      </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-diad">📅</div>
+          <div><div class="modtitle">Día D</div><div class="moddesc">Metas y operación.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('dia_D.html','_self')">Abrir</button>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="src/portal.js"></script>
+
+    <!-- ===================== -->
+    <!-- Scripts de la página -->
+    <!-- ===================== -->
+    <script>
+      // =============================
+      // Carga de catálogo territorial
+      // =============================
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("data/catalogo_territorial.json")
+          .then(response => response.json())
+          .then(data => {
+            cargarMunicipios(data.municipios); // Llena el select de municipios
+            cargarDistritos("sel-df", data.distritos_federales); // Llena el select de DF
+            cargarDistritos("sel-dl", data.distritos_locales); // Llena el select de DL
+          })
+          .catch(error => console.error("Error al cargar el catálogo:", error));
+      });
+
+      // =============================
+      // Funciones para llenar selects
+      // =============================
+      function cargarMunicipios(municipios) {
+        const select = document.getElementById("sel-mun");
+        Object.entries(municipios).forEach(([id, nombre]) => {
+          const option = document.createElement("option");
+          option.value = id;
+          option.textContent = nombre;
+          select.appendChild(option);
+        });
+      }
+
+      function cargarDistritos(selectId, distritos) {
+        const select = document.getElementById(selectId);
+        distritos.forEach(num => {
+          const option = document.createElement("option");
+          option.value = num;
+          option.textContent = `Distrito ${num}`;
+          select.appendChild(option);
+        });
+      }
+
+      // =============================
+      // Habilitar/deshabilitar módulos
+      // =============================
+      document.addEventListener('DOMContentLoaded', function () {
+        const selMun = document.getElementById('sel-mun');
+        const selDf  = document.getElementById('sel-df');
+        const selDl  = document.getElementById('sel-dl');
+
+        // Habilita los módulos si hay selección
+        function habilitarModulos() {
+          const tarjetas = document.querySelectorAll('#mods .modcard');
+          tarjetas.forEach(card => {
+            card.classList.remove('disabled');
+            const boton = card.querySelector('.mod-btn');
+            boton.removeAttribute('disabled');
+          });
+        }
+
+        // Deshabilita los módulos si no hay selección
+        function deshabilitarModulos() {
+          const tarjetas = document.querySelectorAll('#mods .modcard');
+          tarjetas.forEach(card => {
+            card.classList.add('disabled');
+            const boton = card.querySelector('.mod-btn');
+            boton.setAttribute('disabled', true);
+          });
+        }
+
+        // Evalúa si hay selección válida
+        function evaluarSeleccion() {
+          const mun = selMun.value;
+          const df  = selDf.value;
+          const dl  = selDl.value;
+
+          if (mun || df || dl) {
+            habilitarModulos();
+          } else {
+            deshabilitarModulos();
+          }
+        }
+
+        selMun.addEventListener('change', evaluarSeleccion);
+        selDf.addEventListener('change', evaluarSeleccion);
+        selDl.addEventListener('change', evaluarSeleccion);
+      });
+    </script>
+
+    <script>
+(function(){
+  // Ajusta estos IDs a los que tengas en el portal:
+  const selMun = document.getElementById('sel-mun') || document.getElementById('selMun');
+  const selDf  = document.getElementById('sel-df')  || document.getElementById('selDF');
+  const selDl  = document.getElementById('sel-dl')  || document.getElementById('selDL');
+  const allSt  = document.getElementById('all-state') || document.getElementById('allState');
+  const uSum   = document.getElementById('u-sum');
+
+  // (Opcional) si pides las rutas en inputs/controles:
+  const inGeo  = document.getElementById('geo');
+  const inCat  = document.getElementById('catalog');
+
+  function clear(el){ if(el) el.value = ''; }
+  function exclusividad(changed){
+    if(changed === 'MUN'){ clear(selDf); clear(selDl); if(allSt) allSt.checked = false; }
+    if(changed === 'DF'){  clear(selMun); clear(selDl); if(allSt) allSt.checked = false; }
+    if(changed === 'DL'){  clear(selMun); clear(selDf); if(allSt) allSt.checked = false; }
+    if(changed === 'ALL'){ clear(selMun); clear(selDf); clear(selDl); }
+    evaluarSeleccion();
+  }
+
+  function obtenerUniverso(){
+    if(allSt && allSt.checked) return {scope:'ALL', key:null, label:'Estado completo'};
+    if(selMun && selMun.value) return {scope:'MUN', key:selMun.value, label:`Municipio ${selMun.options[selMun.selectedIndex].text}`};
+    if(selDf  && selDf.value)  return {scope:'DF',  key:selDf.value,  label:`Distrito Federal ${selDf.value}`};
+    if(selDl  && selDl.value)  return {scope:'DL',  key:selDl.value,  label:`Distrito Local ${selDl.value}`};
+    return null;
+  }
+
+  function pintarResumen(u){
+    if(!uSum) return;
+    uSum.textContent = u ? `Universo: ${u.label}` : 'Universo: —';
+  }
+
+  function persistir(u){
+    // Defaults de producción (tu nueva estructura):
+    const defaults = {
+      geo: 'data/geo/secciones.geojson',
+      catalog: 'data/catalogo_territorial.json',
+      electoral: {
+        P:  'data/electoral/P.json',
+        G:  'data/electoral/G.json',
+        A:  'data/electoral/A.json',
+        DF: 'data/electoral/DF.json',
+        DL: 'data/electoral/DL.json',
+        S:  'data/electoral/S.json'
+      },
+      // opcional
+      extra: 'data/Datos_Electoral.json'
+    };
+
+    // Si tienes inputs en el portal, respétalos; si no, usa defaults.
+    const paths = {
+      geo: (inGeo?.value || defaults.geo).trim(),
+      catalog: (inCat?.value || defaults.catalog).trim(),
+      electoral: defaults.electoral,
+      extra: defaults.extra
+    };
+
+    localStorage.setItem('AT_UNIVERSE', JSON.stringify({ ...u, ts: Date.now() }));
+    localStorage.setItem('AT_PATHS', JSON.stringify(paths));
+  }
+
+
+  function habilitarModulos(){
+    document.querySelectorAll('#mods .modcard').forEach(card=>{
+      card.classList.remove('disabled');
+      card.querySelector('.mod-btn')?.removeAttribute('disabled');
+    });
+  }
+  function deshabilitarModulos(){
+    document.querySelectorAll('#mods .modcard').forEach(card=>{
+      card.classList.add('disabled');
+      card.querySelector('.mod-btn')?.setAttribute('disabled', true);
+    });
+  }
+
+  function evaluarSeleccion(){
+    const u = obtenerUniverso();
+    pintarResumen(u);
+    if(u){
+      persistir(u);
+      habilitarModulos();
+    } else {
+      deshabilitarModulos();
+    }
+  }
+
+  selMun?.addEventListener('change', ()=>exclusividad('MUN'));
+  selDf?.addEventListener('change',  ()=>exclusividad('DF'));
+  selDl?.addEventListener('change',  ()=>exclusividad('DL'));
+  allSt?.addEventListener('change',  ()=>exclusividad('ALL'));
+
+  // Inicial:
+  evaluarSeleccion();
+})();
+</script>
+
+
+</body>
+</html>

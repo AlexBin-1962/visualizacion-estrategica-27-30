@@ -1,0 +1,1 @@
+export function log(...a){console.log('[AT]',...a);}

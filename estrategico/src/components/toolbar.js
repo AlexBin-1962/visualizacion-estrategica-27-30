@@ -1,0 +1,1 @@
+export function createToolbar(root,items){root.innerHTML='';items.forEach(x=>{const b=document.createElement('button');b.className='btn';b.title=x.label;b.innerHTML=`<div style='font-size:18px'>${x.icon}</div><div class='label'>${x.label}</div>`;b.onclick=()=>x.onClick();root.appendChild(b);});}

@@ -1,0 +1,1 @@
+export async function loadConfig(){const app=await fetch('config/app.config.json').then(r=>r.json());const client=await fetch('config/clients/gto.json').then(r=>r.json());return {...app,client,year:app.year,cargo:app.cargo};}
