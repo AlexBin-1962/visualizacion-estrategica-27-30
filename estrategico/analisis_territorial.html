@@ -106,6 +106,143 @@
 #sec-info .v    { font-weight:600; }
  
 
+  :root{
+  --rail-bg:#ffffff;
+  --rail-br:#cfd8dc;
+  --rail-shadow:0 10px 24px rgba(0,0,0,.15);
+  --fg:#263238;
+  --pink:#e91e63; --pink-bg:#ffebee;
+  --blue:#2196f3; --blue-bg:#e3f2fd;
+  --gray:#90a4ae;
+  }
+  .tool-rail{
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    z-index:2600; pointer-events:auto;
+    display:flex; align-items:center; gap:.5rem;
+  }
+  .rail-toggle{
+    width:42px; height:42px; border-radius:999px;
+    border:1px solid var(--rail-br); background:var(--rail-bg);
+    box-shadow:var(--rail-shadow); display:grid; place-items:center; cursor:pointer;
+  }
+  .rail-group{
+    background:var(--rail-bg); border:1px solid var(--rail-br);
+    border-radius:16px; padding:.5rem; box-shadow:var(--rail-shadow);
+    display:flex; flex-direction:column; gap:.5rem; transition:transform .25s ease, opacity .2s;
+  }
+  .rail-group.is-collapsed{ transform:scale(.98); opacity:.0; pointer-events:none; }
+  .rail-sep{ height:1px; background:var(--rail-br); margin:.25rem 0; }
+
+  .tool{
+    width:44px; height:44px; border-radius:999px; cursor:pointer;
+    border:1px solid var(--rail-br); background:#fff; color:var(--fg);
+    display:grid; place-items:center; box-shadow:0 2px 8px rgba(0,0,0,.08);
+    transition:transform .15s ease, box-shadow .15s ease, background .15s, color .15s, border-color .15s;
+  }
+  .tool:hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(0,0,0,.12); }
+  .tool.active{ background:var(--pink-bg); border-color:var(--pink); color:var(--pink); }
+  .tool svg{ width:22px; height:22px; }
+
+  .tool[data-tool="ganador"].active{ background:var(--blue-bg); border-color:var(--blue); color:var(--blue); }
+
+  .tool[data-tooltip]{
+    position:relative;
+  }
+  .tool[data-tooltip]::after{
+    content:attr(data-tooltip);
+    position:absolute; right:110%; top:50%; transform:translateY(-50%);
+    background:#000; color:#fff; font-size:12px; padding:.25rem .5rem;
+    border-radius:6px; opacity:0; pointer-events:none; white-space:nowrap;
+    transition:opacity .15s;
+  }
+  .tool:hover::after{ opacity:.9; }
+
+  /* 1) Colores correctos en los iconos (svg) */
+  .tool { color: #607d8b; } /* gris base */
+  .tool svg, .tool svg path, .tool svg use { fill: currentColor; stroke: none; }
+
+  .tool.active{
+    background: #ffebee;           /* rosa tenue */
+    border-color: #e91e63;
+    color: #e91e63;
+  }
+  .tool[data-tool="ganador"].active{
+    background: #e3f2fd;           /* azul tenue */
+    border-color: #2196f3;
+    color: #2196f3;
+  }
+
+  /* 2) Tooltips sin “rayitas” fantasma */
+  .tool[data-tooltip]{ position: relative; }
+  .tool[data-tooltip]::after{
+    content: attr(data-tooltip);
+    position: absolute;
+    right: 110%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #000;
+    color: #fff;
+    font-size: 12px;
+    padding: .25rem .5rem;
+    border-radius: 6px;
+    white-space: nowrap;
+
+    /* clave para evitar el “rastro” */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .15s ease, visibility .15s ease;
+  }
+  .tool:hover::after{
+    opacity: .95;
+    visibility: visible;
+  }
+
+  /* Por si el mapa se los tragaba */
+  #tool-rail{ z-index: 5000; }
+
+  .hist-panel{position:absolute;right:18px;top:70px;width:720px;max-width:86vw;background:#fff;border:1px solid #cfd8dc;border-radius:14px;box-shadow:0 12px 28px rgba(0,0,0,.16);z-index:4800;resize:both;overflow:auto}
+  .hist-panel .hdr{display:flex;gap:.75rem;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #e0e0e0;background:linear-gradient(180deg,#4a148c,#6a1b9a);color:#fff}
+  .hist-panel .hdr .ctl{display:flex;align-items:center;gap:.5rem}
+  .hist-panel .hdr label{font-size:12px;opacity:.85}
+  .hist-panel .hdr select{padding:4px 8px;border-radius:8px;border:1px solid #b0bec5}
+  .hist-panel .btn-close{cursor:pointer;border:none;background:#ffcdd2;color:#880e4f;width:28px;height:28px;line-height:28px;border-radius:8px;font-weight:800}
+  .hist-panel .btn-close:hover{background:#ef9a9a}
+  .hist-panel .body{padding:10px}
+  .hist-panel .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .hist-panel .card{border:1px solid #eceff1;border-radius:10px;padding:8px}
+  .hist-panel .card-h{font-weight:700;color:#263238;margin:0 0 6px}
+  @media (max-width:1100px){.hist-panel{width:92vw;right:4vw}.hist-panel .grid{grid-template-columns:1fr}}
+
+
+  /* El panel no debe crecer más que la ventana */
+  #hist-panel{
+    max-height: calc(100vh - 120px);
+    overflow: hidden;
+  }
+
+  /* El área interna sí scrollea si hace falta */
+  #hist-panel .body{
+    max-height: calc(100vh - 170px);
+    overflow: auto;
+  }
+
+  /* Cada tarjeta con alto estable */
+  #hist-panel .card{
+    height: 300px;                 /* ajusta 260–320 a tu gusto */
+    display: flex; flex-direction: column;
+  }
+
+  /* El canvas ocupa el alto de la tarjeta (evita reflow infinito) */
+  #hist-panel .card canvas{
+    flex: 1;
+    min-height: 240px;             /* altura mínima útil */
+    height: 240px !important;      /* forzamos altura */
+    width: 100% !important;
+    display: block;
+  }
+
+
 
 
   </style>
@@ -155,6 +292,83 @@
   </div>
   <div id="map"></div>
 
+    <div id="hist-panel" class="hist-panel" style="display:none">
+    <div class="hdr">
+      <div class="ttl">
+        <strong>Historial</strong> · Sección <span id="hist-sec">—</span>
+      </div>
+      <div class="ctl">
+        <label for="hist-puesto">Puesto</label>
+        <select id="hist-puesto">
+          <option value="P">Presidente</option><option value="S">Senador</option><option value="G">Gobernador</option>
+          <option value="DF">Diputado Federal</option><option value="DL">Diputado Local</option><option value="A">Ayuntamiento</option>
+        </select>
+        <button id="hist-close" class="btn-close" aria-label="Cerrar">×</button>
+      </div>
+    </div>
+    <div class="body">
+      <div class="grid">
+        <div class="card"><div class="card-h">Historial por año (votos)</div><canvas id="hist-bar"></canvas></div>
+        <div class="card"><div class="card-h">Ganadores 2018–2024 (votos)</div><canvas id="hist-win"></canvas></div>
+        <div class="card"><div class="card-h">Competencia 2024 (% del total)</div><canvas id="hist-pie"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+      <!-- Sprite de íconos (inline, sin dependencias) -->
+    <svg style="display:none">
+      <symbol id="ic-history" viewBox="0 0 24 24">
+        <path d="M13 3a9 9 0 1 1-9 9H2l3.5-3.5L9 12H6a7 7 0 1 0 7-7v2h-2V3zM12 7h2v5l3 1-0.5 1.9L12 13V7z"/>
+      </symbol>
+      <symbol id="ic-trophy" viewBox="0 0 24 24">
+        <path d="M18 2H6v2H3v3a5 5 0 0 0 5 5 5 5 0 0 0 4 2 5 5 0 0 0 4-2 5 5 0 0 0 5-5V4h-3V2zM5 6V6.2A3 3 0 0 0 8 9a7 7 0 0 1-3-3zM19 6v.2A3 3 0 0 1 16 9a7 7 0 0 0 3-3zM10 16h4v2h-4v-2zm-2 4h8v2H8v-2z"/>
+      </symbol>
+      <symbol id="ic-compare" viewBox="0 0 24 24">
+        <path d="M10 3H5v18h5V3zm9 0h-5v18h5V3zM8 7h1v10H8V7zm7 0h1v10h-1V7z"/>
+      </symbol>
+      <symbol id="ic-forecast" viewBox="0 0 24 24">
+        <path d="M6 19a4 4 0 1 1 1-7.874A6 6 0 1 1 18 18H6zm0-2h12a4 4 0 1 0-1.264-7.787A6.002 6.002 0 0 0 6.126 13H6a2 2 0 1 0 0 4z"/>
+      </symbol>
+      <symbol id="ic-download" viewBox="0 0 24 24">
+        <path d="M12 3v10l4-4 1.4 1.4L12 16 6.6 10.4 8 9l4 4V3h0zM5 19h14v2H5v-2z"/>
+      </symbol>
+      <symbol id="ic-menu" viewBox="0 0 24 24">
+        <path d="M4 7h16v2H4V7zm0 4h16v2H4v-2zm0 4h10v2H4v-2z"/>
+      </symbol>
+    </svg>
+
+    <!-- Rail de herramientas -->
+    <div id="tool-rail" class="tool-rail">
+      <button class="rail-toggle" id="railToggle" aria-label="Mostrar/ocultar">
+        <svg><use href="#ic-menu"></use></svg>
+      </button>
+
+      <div class="rail-group" id="railGroup">
+        <button class="tool" data-tool="historial"  data-tooltip="Historial">
+          <svg><use href="#ic-history"></use></svg>
+        </button>
+        <button class="tool" data-tool="ganador"    data-tooltip="Ganador">
+          <svg><use href="#ic-trophy"></use></svg>
+        </button>
+        <button class="tool" data-tool="competencia" data-tooltip="Competencia">
+          <svg><use href="#ic-compare"></use></svg>
+        </button>
+        <button class="tool" data-tool="proyeccion" data-tooltip="Proyección">
+          <svg><use href="#ic-forecast"></use></svg>
+        </button>
+
+        <div class="rail-sep"></div>
+
+        <button class="tool" data-tool="exportar"   data-tooltip="Exportar">
+          <svg><use href="#ic-download"></use></svg>
+        </button>
+      </div>
+    </div>
+
+
   <!-- === SCRIPT ÚNICO === -->
   <script>
   // ===== 0) Campos (ajusta si tus nombres son distintos) =====
@@ -166,7 +380,13 @@
     const urlGeo = paths.geo || 'data/geo/secciones.geojson';
     const catUrl = paths.catalog || 'data/catalogo_territorial.json';
     const ELP = paths.electoral?.P || 'data/electoral/P.json';
-// ...
+  // ...
+
+  // Chart.js v4 necesita registrar el plugin explícitamente
+  if (window.Chart && window.ChartDataLabels){
+    Chart.register(ChartDataLabels);
+}
+
 
 
 
@@ -650,7 +870,7 @@
         const feats =
           (window.AT_CTX?.layer?.toGeoJSON?.().features) ||
           (window.AT_DATA?.features) || [];
-        feat = feats.find(f => String(f.properties?.SECCION) === sec);
+        feat = feats.find(f => String(f.properties?.SECCION),sec);
       }
 
       if (!feat) {
@@ -891,6 +1111,41 @@ function getDlListFromCatalog(feats){
 
   });
 
+  // Carga y cache
+  window.AT_ELECT = window.AT_ELECT || {};
+  function getPaths(){ try{ return JSON.parse(localStorage.getItem('AT_PATHS')||'{}'); }catch{ return {}; } }
+  function getPuestoPath(p){ const paths=getPaths(); return paths?.electoral?.[p] || `data/electoral/${p}.json`; }
+  async function loadPuesto(p){
+    if (AT_ELECT[p]) return AT_ELECT[p];
+    const r = await fetch(getPuestoPath(p) + `?v=${Date.now()}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status} al cargar ${p}.json`);
+    AT_ELECT[p] = await r.json();
+    return AT_ELECT[p];
+  }
+
+  // Detector
+  function detectSchemaFrom(data){
+    const secs = data?.secciones || {};
+    const firstKey = Object.keys(secs)[0];
+    const slot = secs[firstKey] || {};
+    const years = Object.keys(slot).filter(k => /^\d{4}$/.test(k)).map(n=>+n).sort();
+    // toma un año “reciente” para inferir partidos
+    const row = slot[String(years[years.length-1])] || slot[String(years[0])] || {};
+    const parties = (data?.meta?.parties && data.meta.parties.length)
+      ? data.meta.parties
+      : Object.keys(row).filter(k => !['VOTOS','LN'].includes(k));
+    return { years, parties, exampleSection:firstKey, exampleRow: row };
+  }
+
+  // Uso rápido en consola:
+  (async ()=>{
+    const A = await loadPuesto('A');  // cambia a 'P','DF','DL','G','S' para probar
+    const info = detectSchemaFrom(A);
+    console.log('[A] years:', info.years, 'parties:', info.parties);
+    console.log('[A] example row:', info.exampleSection, info.exampleRow);
+  })();
+
+
   (function wireATHotkeys(){
       if (window.__AT_HOTKEYS) return;
       window.__AT_HOTKEYS = true;
@@ -910,6 +1165,187 @@ function getDlListFromCatalog(feats){
         }
       });
     })();
+
+    // Mostrar/ocultar el rail (colapso)
+    (function wireToolRail(){
+      const railBtn = document.getElementById('railToggle');
+      const group   = document.getElementById('railGroup');
+      if (!railBtn || !group) return;
+
+      railBtn.addEventListener('click', ()=>{
+        group.classList.toggle('is-collapsed');
+      });
+
+      // Delegación de clicks para marcar activo y disparar acciones
+      group.addEventListener('click', (ev)=>{
+        const btn = ev.target.closest('.tool'); if (!btn) return;
+        group.querySelectorAll('.tool').forEach(b => b.classList.toggle('active', b===btn));
+        const tool = btn.getAttribute('data-tool');
+        runTool(tool);
+      });
+    })();
+
+    // Punto de entrada de cada herramienta
+    async function runTool(tool){
+      switch (tool){
+        case 'historial':
+          // Aquí activamos tu panel/diálogo de gráficas de Historial
+          // (conectaremos a las nuevas funciones al vuelo)
+          openHistorialUI();
+          break;
+        case 'ganador':
+          await paintWinnersOnLayer({ puesto:'P', year:2024 }); // ejemplo
+          break;
+        case 'competencia':
+          // Ejemplo: recolorear por margen
+          await paintByMargin({ puesto:'P', year:2024 });
+          break;
+        case 'proyeccion':
+          openProyeccionUI();
+          break;
+        case 'exportar':
+          exportMapPNG(); // si ya tienes html2canvas/jsPDF integrados
+          break;
+        default:
+          console.log('[Tool]', tool);
+      }
+    }
+
+    // Stubs (los conectamos después con tus gráficas/núcleo)
+    function openHistorialUI(){ /* abrir panel/modal con charts */ }
+    function openProyeccionUI(){ /* ... */ }
+    async function paintByMargin({puesto,year}){ /* ... usando universe/sectionMetrics */ }
+    function exportMapPNG(){ /* ... */ }
+
+
+  // Marca uno como activo al cargar (para ver el color desde el inicio)
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.querySelector('#railGroup .tool')?.classList.add('active');
+  });
+
+  // ====== Loader electoral + helpers ======
+    window.AT_ELECT = window.AT_ELECT || {};
+    function getPaths(){ try{return JSON.parse(localStorage.getItem('AT_PATHS')||'{}');}catch{return{};} }
+    function getPuestoPath(p){ const paths=getPaths(); return paths?.electoral?.[p]||`data/electoral/${p}.json`; }
+    async function loadPuesto(p){ if(AT_ELECT[p]) return AT_ELECT[p]; const r=await fetch(getPuestoPath(p)+`?v=${Date.now()}`); AT_ELECT[p]=await r.json(); return AT_ELECT[p]; }
+    const asInt0=v=>(v==null||(typeof v==='number'&&v!==v)||String(v).trim()==='')?0:Math.round(+v||0);
+    const secKey=s=>String(s).replace(/\D+/g,'').padStart(4,'0');
+    function winnerOf(votes){ let best=null,max=-1; for(const[k,v]of Object.entries(votes)){ if(v>max){max=v;best=k;} } const tot=Object.values(votes).reduce((a,b)=>a+b,0); return {party:best,votes:max,total:tot}; }
+    const CORE_PARTIES=['PAN','PRI','PVEM','MORENA'];
+    const PARTY_COLORS={PAN:'#1e88e5',PRI:'#c62828',PVEM:'#2e7d32',MORENA:'#7b1fa2',OTROS:'#90a4ae'};
+
+    // ====== Panel: drag + close ======
+    (function wireHistPanel(){
+      const box=document.getElementById('hist-panel');
+      const hdr=box?.querySelector('.hdr');
+      const close=document.getElementById('hist-close');
+      if(!box||!hdr||box.__wired) return;
+      if(window.L&&L.DomEvent){ L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box); }
+      let dragging=false,sx=0,sy=0,bx=0,by=0;
+      hdr.addEventListener('mousedown',e=>{
+        if(e.target.closest('.btn-close')||e.target.tagName==='SELECT') return;
+        e.preventDefault(); e.stopPropagation();
+        const r=box.getBoundingClientRect(); dragging=true; sx=e.clientX; sy=e.clientY; bx=r.left; by=r.top;
+        box.style.position='absolute'; box.style.right='auto'; box.style.bottom='auto'; document.body.style.userSelect='none';
+      });
+      window.addEventListener('mousemove',e=>{
+        if(!dragging) return; e.preventDefault(); e.stopPropagation();
+        const dx=e.clientX-sx, dy=e.clientY-sy; box.style.left=(bx+dx)+'px'; box.style.top=(by+dy)+'px';
+      });
+      window.addEventListener('mouseup',()=>{ if(!dragging) return; dragging=false; document.body.style.userSelect=''; });
+      close?.addEventListener('click',()=>{ box.style.display='none'; destroyHistCharts(); });
+      box.__wired=true;
+    })();
+
+    function getActiveSectionSec(){
+      const hl=window.__SEC_HL;
+      if(hl?.getLayers){ const lyr=hl.getLayers()[0]; return lyr?.feature?.properties?.SECCION??null; }
+      const t=document.getElementById('si-sec')?.textContent; return t&&t!=='—'?t:null;
+    }
+
+    // Normaliza: "0007" -> "7", "201" -> "201", 7 -> "7"
+    const normSec = s => String(s ?? '').replace(/\D+/g, '');
+
+    // Busca la fila de la sección en el JSON, tolerando distintos formatos de clave
+    function findSecSlot(data, sec){
+      const k = normSec(sec);
+      const map = data?.secciones || {};
+      return map[k]                  // "201"
+          ?? map[k.padStart(4,'0')]  // "0201"
+          ?? map[String(+k)]         // 201 (si estuviera como número)
+          ?? null;
+    }
+
+    // Igualdad de secciones robusta
+    const eqSec = (a,b) => normSec(a) === normSec(b);
+
+
+    // ====== Charts ======
+    let __HIST_CHART_BAR=null,__HIST_CHART_WIN=null,__HIST_CHART_PIE=null;
+    function destroyHistCharts(){ try{__HIST_CHART_BAR?.destroy();}catch(_){}
+      try{__HIST_CHART_WIN?.destroy();}catch(_){}
+      try{__HIST_CHART_PIE?.destroy();}catch(_){}
+      __HIST_CHART_BAR=__HIST_CHART_WIN=__HIST_CHART_PIE=null; }
+
+    async function renderHistorialCharts(){
+      const panel=document.getElementById('hist-panel');
+      const puesto=document.getElementById('hist-puesto').value||'P';
+      const sec=getActiveSectionSec();
+      if(!sec){ alert('Selecciona una sección en el mapa.'); return; }
+      document.getElementById('hist-sec').textContent=sec;
+
+    const data = await loadPuesto(puesto);
+    const slot = findSecSlot(data, sec);
+    if (!slot){ destroyHistCharts(); console.warn('[Hist] sin datos', sec, puesto); return; }
+
+    // Opción 1 (auto-detecta los años disponibles en esa sección)
+    const years = Object.keys(slot).filter(k=>/^\d{4}$/.test(k)).map(Number).sort();
+    // Opción 2 (forzar 2018/2021/2024 aunque falte alguno)
+    // const years = [2018, 2021, 2024];
+
+    const rows  = years.map(y => slot[String(y)] || null);
+
+
+      destroyHistCharts();
+
+      // 1) Historial (barras agrupadas)
+      const barLabels=years.map(String);
+      const barDS=CORE_PARTIES.map(p=>({ label:p, data:rows.map(r=>asInt0(r?.[p])), backgroundColor:PARTY_COLORS[p]||'#90a4ae' }));
+      __HIST_CHART_BAR=new Chart(document.getElementById('hist-bar').getContext('2d'),{
+        type:'bar', data:{labels:barLabels,datasets:barDS},
+        options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,
+           plugins:{legend:{position:'bottom'},datalabels:{anchor:'end',align:'top',formatter:v=>v||''}},
+          scales:{y:{beginAtZero:true}}
+        }
+      });
+
+      // 2) Ganadores por año (barras)
+      const winLabels=[],winData=[],winColors=[];
+      years.forEach((y,i)=>{ const r=rows[i]||{}; const v={}; CORE_PARTIES.forEach(p=>v[p]=asInt0(r[p]));
+        const w=winnerOf(v); winLabels.push(`${y} • ${w.party||'—'}`); winData.push(asInt0(w.votes)); winColors.push(PARTY_COLORS[w.party]||'#90a4ae'); });
+      __HIST_CHART_WIN=new Chart(document.getElementById('hist-win').getContext('2d'),{
+        type:'bar', data:{labels:winLabels,datasets:[{label:'Votos',data:winData,backgroundColor:winColors}]},
+        options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,plugins:{legend:{display:false},datalabels:{anchor:'end',align:'top',formatter:v=>v||''}},scales:{y:{beginAtZero:true}}}
+      });
+
+      // 3) Competencia 2024 (pie)
+      const r24=rows[2]||{}, pieLabels=CORE_PARTIES, pieData=pieLabels.map(p=>asInt0(r24[p]));
+      const pieTotal=pieData.reduce((a,b)=>a+b,0)||1;
+      __HIST_CHART_PIE=new Chart(document.getElementById('hist-pie').getContext('2d'),{
+        type:'pie', data:{labels:pieLabels,datasets:[{data:pieData,backgroundColor:pieLabels.map(p=>PARTY_COLORS[p]||'#90a4ae')}]},
+        options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,plugins:{legend:{position:'bottom'},datalabels:{formatter:(v)=>((v/pieTotal*100).toFixed(1)+'%'),color:'#111'}}}
+      });
+    }
+
+    function openHistorialUI(){
+      const box=document.getElementById('hist-panel');
+      box.style.display='block';
+      const sel=document.getElementById('hist-puesto');
+      if(!sel.__wired){ sel.addEventListener('change',renderHistorialCharts); sel.__wired=true; }
+      renderHistorialCharts();
+    }
+
+
 
 
   </script>
