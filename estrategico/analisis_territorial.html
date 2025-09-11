@@ -71,8 +71,8 @@
 /* Panel flotante sección */
 #sec-info {
   position: absolute;
-  right: 16px; bottom: 16px;
-  width: 320px; max-width: 38vw; min-width: 260px;
+  left: 10px; bottom: 360px;
+  width: 300px; max-width: 38vw; min-width: 260px;
   background: #ffffff;
   border: 1px solid #cfd8dc;
   border-radius: 10px;
@@ -202,7 +202,7 @@
   #tool-rail{ z-index: 5000; }
 
   .hist-panel{position:absolute;right:18px;top:70px;width:720px;max-width:86vw;background:#fff;border:1px solid #cfd8dc;border-radius:14px;box-shadow:0 12px 28px rgba(0,0,0,.16);z-index:4800;resize:both;overflow:auto}
-  .hist-panel .hdr{display:flex;gap:.75rem;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #e0e0e0;background:linear-gradient(180deg,#4a148c,#6a1b9a);color:#fff}
+  .hist-panel .hdr{display:flex;gap:.75rem;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #e0e0e0;background:linear-gradient(180deg,#4a148c,#ec76c5);color:#fff}
   .hist-panel .hdr .ctl{display:flex;align-items:center;gap:.5rem}
   .hist-panel .hdr label{font-size:12px;opacity:.85}
   .hist-panel .hdr select{padding:4px 8px;border-radius:8px;border:1px solid #b0bec5}
@@ -251,7 +251,7 @@
   .hist-panel .btn { cursor:pointer; border:1px solid #b0bec5; background:#fff;
     border-radius:8px; padding:4px 8px; font-size:12px; }
   .hist-panel .btn:hover{ background:#f3f6f9; }
-  .hist-panel .btn-pink{ background:#ffe6ee; border-color:#f48fb1; color:#880e4f; }
+  .hist-panel .btn-pink{ background:#ffe6ee; border-color:#f48fb1; color:#dd56d2; }
   .hist-panel .btn-blue{ background:#e3f2fd; border-color:#90caf9; color:#0d47a1; }
 
   /* Altos/scroll estables de las tarjetas/canvas */
@@ -260,6 +260,40 @@
   #hist-panel .card{ height:300px; display:flex; flex-direction:column; }
   #hist-panel .card canvas{ flex:1; min-height:240px; height:240px !important; width:100% !important; display:block; }
 
+
+    /* Barra superior */
+    .ttb .ttb-wrap{
+      display:flex; align-items:center; gap:.5rem;
+      background:#ffffffcc; backdrop-filter: blur(6px);
+      border:1px solid #cfd8dc; border-radius:12px; padding:8px 10px;
+      box-shadow:0 10px 24px rgba(0,0,0,.12);
+    }
+    .ttb-btn{
+      border:1px solid #b0bec5; background:#fff; color:#37474f;
+      border-radius:10px; padding:6px 10px; cursor:pointer; font-size:13px;
+    }
+    .ttb-btn:hover{ background:#f5f7f9; }
+    .ttb-primary{ background:#e3f2fd; border-color:#90caf9; color:#0d47a1; }
+    .ttb-help{ background:#ffe6ee; border-color:#f48fb1; color:#880e4f; }
+    .ttb-sep{ width:1px; height:26px; background:#e0e0e0; }
+    .ttb-label{ font-size:12px; color:#455a64; }
+    .ttb-select{
+      padding:5px 8px; border:1px solid #b0bec5; border-radius:8px; font-size:13px;
+    }
+
+    /* Modal de ayuda */
+    .hm{ position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:5300; display:grid; place-items:center; }
+    .hm-content{
+      width:min(860px, 92vw); max-height:80vh; overflow:auto;
+      background:#fff; border:1px solid #cfd8dc; border-radius:14px; box-shadow:0 16px 40px rgba(0,0,0,.28);
+    }
+    .hm-hdr{ display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px; border-bottom:1px solid #e0e0e0; background:linear-gradient(180deg,#eceff1,#e3f2fd); }
+    .hm-body{ padding:12px; }
+    .hm details{ border:1px solid #eceff1; border-radius:10px; padding:8px 10px; margin-bottom:8px; }
+    .hm summary{ cursor:pointer; font-weight:600; color:#263238; }
+    .btn-close{ cursor:pointer; border:none; background:#ffcdd2; color:#880e4f; width:28px;height:28px;line-height:28px;border-radius:8px;font-weight:800 }
+    .btn-close:hover{ background:#ef9a9a; }
 
 
 
@@ -390,6 +424,92 @@
 
   <!-- === SCRIPT ÚNICO === -->
   <script>
+
+  // Evita que la barra capture scroll/clicks del mapa
+    (function wireTopBar(){
+      const bar = document.getElementById('top-toolbar');
+      if (!bar || bar.__wired) return;
+      if (window.L && L.DomEvent){
+        L.DomEvent.disableClickPropagation(bar);
+        L.DomEvent.disableScrollPropagation(bar);
+      }
+      // Botones
+      document.getElementById('btn-historial')?.addEventListener('click', ()=> {
+        if (typeof openHistorialUI === 'function') openHistorialUI();
+      });
+      document.getElementById('btn-abrir-comp')?.addEventListener('click', ()=> {
+        const kind = document.getElementById('comp-metric')?.value || 'ganador';
+        if (typeof openComparativaUI === 'function') openComparativaUI(kind);
+      });
+      document.getElementById('btn-ayuda')?.addEventListener('click', openHelpModal);
+      // Atajos: H historial, C comparativa, ? ayuda
+      document.addEventListener('keydown', (e)=>{
+        if (e.key==='H' || e.key==='h'){ e.preventDefault(); if (typeof openHistorialUI==='function') openHistorialUI(); }
+        if (e.key==='C' || e.key==='c'){ e.preventDefault(); const k=document.getElementById('comp-metric')?.value||'ganador'; if (typeof openComparativaUI==='function') openComparativaUI(k); }
+        if (e.key==='?' ){ e.preventDefault(); openHelpModal(); }
+      });
+      bar.__wired = true;
+    })();
+
+    // ===== Ayuda: acordeón =====
+    const HELP_ITEMS = [
+      {
+        id:'historial',
+        title:'Historial (sección)',
+        short:'Tres gráficas: votos por partido 2018–2024, ganador por año y pastel de competencia del último año.',
+        bullets:[
+          'Toma la sección seleccionada (resaltada).',
+          'Selector de puesto (P/S/G/DF/DL/A).',
+          'Pastel: por defecto el último año disponible; puedes cambiarlo.',
+        ]
+      },
+      {
+        id:'comp-ganador',
+        title:'Ganador + margen (sección)',
+        short:'Muestra votos por partido del año elegido y resume ganador, votos y margen absoluto/%.',
+        bullets:[
+          'Elige puesto y año en el panel.',
+          'Útil para ver cuán “segura”/“competida” es la sección en ese año.',
+        ]
+      },
+      {
+        id:'comp-participacion',
+        title:'Participación (sección)',
+        short:'Serie histórica de participación (VOTOS/LN %) por año disponible.',
+        bullets:[
+          'Calculada al vuelo con VOTOS/LN del puesto elegido.',
+          'Para P/S/G sólo 2018 y 2024; para DF/DL/A incluye 2021.',
+        ]
+      },
+      // Placeholders de futuras métricas (cuando las integremos):
+      { id:'comp-margen-tiempo', title:'Margen en el tiempo (sección)', short:'Evolución del margen entre 1º y 2º lugar por año.', bullets:['Detecta si la sección se volvió más competida o más segura.'] },
+      { id:'comp-swing', title:'Swing (sección)', short:'Cambio de votos/participación por partido entre elecciones.', bullets:['Mide ganancia/pérdida relativa de cada partido.'] },
+      { id:'comp-h2h', title:'Head-to-Head PAN vs MORENA', short:'Ventaja en votos/% por año entre PAN y MORENA.', bullets:['Línea con valores ± y ganador del duelo.'] },
+      { id:'comp-hhi', title:'Competitividad (HHI)', short:'Índice de concentración (∑ share²).', bullets:['Bajo = competido; alto = concentrado.'] },
+      { id:'comp-vol', title:'Volatilidad (Pedersen)', short:'Suma de cambios absolutos en shares / 2.', bullets:['Cuánta “movida” hubo entre elecciones.'] },
+      { id:'comp-proy', title:'Proyección simple', short:'Tendencia lineal por partido y pronóstico.', bullets:['Exploratorio; con cautela.'] },
+    ];
+
+    function openHelpModal(){
+      const modal = document.getElementById('help-modal');
+      const body  = document.getElementById('help-accordion');
+      if (!modal || !body) return;
+      if (!body.__built){
+        body.innerHTML = HELP_ITEMS.map(it => `
+          <details>
+            <summary>${it.title}</summary>
+            <p style="margin:.4rem 0;color:#37474f">${it.short}</p>
+            ${it.bullets?.length ? `<ul style="margin:.2rem 0 .6rem 1rem">${it.bullets.map(b=>`<li>${b}</li>`).join('')}</ul>` : ''}
+          </details>
+        `).join('');
+        body.__built = true;
+      }
+      modal.style.display='grid';
+      document.getElementById('help-close')?.addEventListener('click', ()=> modal.style.display='none', { once:true });
+      // Cierra con click fuera
+      modal.addEventListener('click', (e)=>{ if (e.target === modal) modal.style.display='none'; }, { once:true });
+    }
+
 
 
     
@@ -1429,6 +1549,36 @@ function getDlListFromCatalog(feats){
     <div class="row"><span class="k">LN (2024)</span>    <span class="v" id="si-ln">—</span></div>
   </div>
 </div>
+
+
+  <!-- Barra superior -->
+<div id="top-toolbar" class="ttb" style="position:absolute; top:12px; right:12px; z-index:5200;">
+  <div class="ttb-wrap">
+    <button id="btn-historial" class="ttb-btn" title="Historial (H)">Historial</button>
+    <div class="ttb-sep"></div>
+    <label for="comp-metric" class="ttb-label">Métrica</label>
+    <select id="comp-metric" class="ttb-select">
+      <option value="ganador">Ganador + margen</option>
+      <option value="participacion">Participación</option>
+      <!-- futuras: margen-tiempo, swing, h2h, hhi, volatilidad, proyección… -->
+    </select>
+    <button id="btn-abrir-comp" class="ttb-btn ttb-primary" title="Abrir comparativa (C)">Abrir</button>
+    <div class="ttb-sep"></div>
+    <button id="btn-ayuda" class="ttb-btn ttb-help" title="Ayuda (?)">Ayuda</button>
+  </div>
+</div>
+
+<!-- Modal de ayuda con acordeón -->
+<div id="help-modal" class="hm" style="display:none">
+  <div class="hm-content">
+    <div class="hm-hdr">
+      <strong>Ayuda de consultas</strong>
+      <button id="help-close" class="btn-close" aria-label="Cerrar">×</button>
+    </div>
+    <div id="help-accordion" class="hm-body"></div>
+  </div>
+</div>
+
 
 </body>
 </html>
