@@ -243,6 +243,25 @@
   }
 
 
+  /* Controles del header del historial */
+  .hist-panel .ctl { display:flex; align-items:center; gap:.5rem; }
+  .hist-panel .ctl label { font-size:12px; opacity:.85; white-space:nowrap; }
+  .hist-panel .ctl select { padding:4px 8px; border-radius:8px; border:1px solid #b0bec5; }
+
+  .hist-panel .btn { cursor:pointer; border:1px solid #b0bec5; background:#fff;
+    border-radius:8px; padding:4px 8px; font-size:12px; }
+  .hist-panel .btn:hover{ background:#f3f6f9; }
+  .hist-panel .btn-pink{ background:#ffe6ee; border-color:#f48fb1; color:#880e4f; }
+  .hist-panel .btn-blue{ background:#e3f2fd; border-color:#90caf9; color:#0d47a1; }
+
+  /* Altos/scroll estables de las tarjetas/canvas */
+  #hist-panel{ max-height:calc(100vh - 120px); overflow:hidden; }
+  #hist-panel .body{ max-height:calc(100vh - 170px); overflow:auto; }
+  #hist-panel .card{ height:300px; display:flex; flex-direction:column; }
+  #hist-panel .card canvas{ flex:1; min-height:240px; height:240px !important; width:100% !important; display:block; }
+
+
+
 
 
   </style>
@@ -371,6 +390,18 @@
 
   <!-- === SCRIPT ÚNICO === -->
   <script>
+
+
+    
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.Chart && window.ChartDataLabels) {
+      Chart.register(ChartDataLabels);
+    }
+    // …tu código que crea gráficas…
+  });
+
+
+
   // ===== 0) Campos (ajusta si tus nombres son distintos) =====
   // DL = Distrito Local, DF = Distrito Federal
   const FIELD_KEYS = { mun: 'MUNICIPIO', dl: 'DISTRITO_L', df: 'DISTRITO_F' };
@@ -385,7 +416,13 @@
   // Chart.js v4 necesita registrar el plugin explícitamente
   if (window.Chart && window.ChartDataLabels){
     Chart.register(ChartDataLabels);
-}
+  }
+
+  
+  // Asegura etiquetas numéricas en gráficos
+  if (window.Chart && window.ChartDataLabels) {
+    Chart.register(ChartDataLabels);
+  }
 
 
 
@@ -870,7 +907,7 @@
         const feats =
           (window.AT_CTX?.layer?.toGeoJSON?.().features) ||
           (window.AT_DATA?.features) || [];
-        feat = feats.find(f => String(f.properties?.SECCION),sec);
+        feat = feats.find(f => normSec(f.properties?.SECCION) === normSec(sec));
       }
 
       if (!feat) {
@@ -1328,13 +1365,44 @@ function getDlListFromCatalog(feats){
         options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,plugins:{legend:{display:false},datalabels:{anchor:'end',align:'top',formatter:v=>v||''}},scales:{y:{beginAtZero:true}}}
       });
 
-      // 3) Competencia 2024 (pie)
-      const r24=rows[2]||{}, pieLabels=CORE_PARTIES, pieData=pieLabels.map(p=>asInt0(r24[p]));
-      const pieTotal=pieData.reduce((a,b)=>a+b,0)||1;
-      __HIST_CHART_PIE=new Chart(document.getElementById('hist-pie').getContext('2d'),{
-        type:'pie', data:{labels:pieLabels,datasets:[{data:pieData,backgroundColor:pieLabels.map(p=>PARTY_COLORS[p]||'#90a4ae')}]},
-        options:{responsive:true,maintainAspectRatio:false,resizeDelay:150,animation:false,plugins:{legend:{position:'bottom'},datalabels:{formatter:(v)=>((v/pieTotal*100).toFixed(1)+'%'),color:'#111'}}}
-      });
+      // 3) Competencia (pie) — usa SIEMPRE el último año disponible
+      const rLast     = rows[rows.length - 1] || {};
+      const pieLabels = CORE_PARTIES;  // o filtra si quieres mostrar solo los que tienen datos
+      const pieData   = pieLabels.map(p => asInt0(rLast[p]));
+      const pieTotal  = pieData.reduce((a,b)=>a+b,0) || 1;
+
+      __HIST_CHART_PIE = new Chart(
+        document.getElementById('hist-pie').getContext('2d'),
+        {
+          type: 'pie',
+          data: {
+            labels: pieLabels,
+            datasets: [{
+              data: pieData,
+              backgroundColor: pieLabels.map(p => PARTY_COLORS[p] || '#90a4ae')
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            resizeDelay: 150,
+            animation: false,
+            plugins: {
+              legend: { position: 'bottom' },
+              datalabels: {
+                formatter: (v) => ((v / pieTotal * 100).toFixed(1) + '%'),
+                color: '#111'
+              },
+              // opcional: rotula el año que se muestra
+              title: {
+                display: true,
+                text: `Competencia ${years[years.length - 1]} (% del total)`
+              }
+            }
+          }
+        }
+      );
+
     }
 
     function openHistorialUI(){
