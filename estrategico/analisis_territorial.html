@@ -199,7 +199,7 @@
   }
 
   /* Por si el mapa se los tragaba */
-  #tool-rail{ z-index: 5000; }
+  #tool-rail{ display: none !important; z-index: 5000; }
 
   .hist-panel{position:absolute;right:18px;top:70px;width:720px;max-width:86vw;background:#fff;border:1px solid #cfd8dc;border-radius:14px;box-shadow:0 12px 28px rgba(0,0,0,.16);z-index:4800;resize:both;overflow:auto}
   .hist-panel .hdr{display:flex;gap:.75rem;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #e0e0e0;background:linear-gradient(180deg,#4a148c,#ec76c5);color:#fff}
@@ -1324,49 +1324,7 @@ function getDlListFromCatalog(feats){
     })();
 
     // Mostrar/ocultar el rail (colapso)
-    (function wireToolRail(){
-      const railBtn = document.getElementById('railToggle');
-      const group   = document.getElementById('railGroup');
-      if (!railBtn || !group) return;
-
-      railBtn.addEventListener('click', ()=>{
-        group.classList.toggle('is-collapsed');
-      });
-
-      // Delegación de clicks para marcar activo y disparar acciones
-      group.addEventListener('click', (ev)=>{
-        const btn = ev.target.closest('.tool'); if (!btn) return;
-        group.querySelectorAll('.tool').forEach(b => b.classList.toggle('active', b===btn));
-        const tool = btn.getAttribute('data-tool');
-        runTool(tool);
-      });
-    })();
-
-    // Punto de entrada de cada herramienta
-    async function runTool(tool){
-      switch (tool){
-        case 'historial':
-          // Aquí activamos tu panel/diálogo de gráficas de Historial
-          // (conectaremos a las nuevas funciones al vuelo)
-          openHistorialUI();
-          break;
-        case 'ganador':
-          await paintWinnersOnLayer({ puesto:'P', year:2024 }); // ejemplo
-          break;
-        case 'competencia':
-          // Ejemplo: recolorear por margen
-          await paintByMargin({ puesto:'P', year:2024 });
-          break;
-        case 'proyeccion':
-          openProyeccionUI();
-          break;
-        case 'exportar':
-          exportMapPNG(); // si ya tienes html2canvas/jsPDF integrados
-          break;
-        default:
-          console.log('[Tool]', tool);
-      }
-    }
+    
 
     // Stubs (los conectamos después con tus gráficas/núcleo)
     function openHistorialUI(){ /* abrir panel/modal con charts */ }
@@ -1419,6 +1377,10 @@ function getDlListFromCatalog(feats){
       if(hl?.getLayers){ const lyr=hl.getLayers()[0]; return lyr?.feature?.properties?.SECCION??null; }
       const t=document.getElementById('si-sec')?.textContent; return t&&t!=='—'?t:null;
     }
+
+    // Compat no-op: por si quedó alguna llamada vieja
+function runTool(){ /* eliminado: barra vertical */ }
+
 
     // Normaliza: "0007" -> "7", "201" -> "201", 7 -> "7"
     const normSec = s => String(s ?? '').replace(/\D+/g, '');
