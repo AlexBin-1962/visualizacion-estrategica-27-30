@@ -433,10 +433,9 @@
         L.DomEvent.disableClickPropagation(bar);
         L.DomEvent.disableScrollPropagation(bar);
       }
-      // Botones
-      document.getElementById('btn-historial')?.addEventListener('click', ()=> {
-        if (typeof openHistorialUI === 'function') openHistorialUI();
-      });
+    
+
+
       document.getElementById('btn-abrir-comp')?.addEventListener('click', ()=> {
         const kind = document.getElementById('comp-metric')?.value || 'ganador';
         if (typeof openComparativaUI === 'function') openComparativaUI(kind);
@@ -1016,6 +1015,8 @@
 
       }
 
+   
+
     function gotoSection(item){
       const atMap = (window.AT_CTX?.map) || ensureLeafletMap();
 
@@ -1495,8 +1496,12 @@ function runTool(){ /* eliminado: barra vertical */ }
       renderHistorialCharts();
     }
 
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('btn-historial');
+      if (btn) btn.addEventListener('click', () => openHistorialUI());
+    });
 
-
+    
 
   </script>
   <div id="sec-info">
@@ -1540,6 +1545,9 @@ function runTool(){ /* eliminado: barra vertical */ }
     <div id="help-accordion" class="hm-body"></div>
   </div>
 </div>
+
+
+
 
 
 </body>
