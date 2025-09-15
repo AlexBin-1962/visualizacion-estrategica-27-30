@@ -295,7 +295,50 @@
     .btn-close{ cursor:pointer; border:none; background:#ffcdd2; color:#880e4f; width:28px;height:28px;line-height:28px;border-radius:8px;font-weight:800 }
     .btn-close:hover{ background:#ef9a9a; }
 
+    .qa-table{ width:100%; border-collapse:collapse; font-size:13px }
+    .qa-table th,.qa-table td{ border:1px solid #e0e0e0; padding:6px 8px; text-align:right }
+    .qa-table th:first-child,.qa-table td:first-child{ text-align:left }
+    .qa-warn{ margin-top:6px; color:#b71c1c }
+    .bad-cell{ background:#fff3e0; color:#e65100; font-weight:600 }
 
+    .qa-table input.qa-num{
+      width: 140px; text-align: right; padding: 4px 6px;
+      border: 1px solid #d0d0d0; border-radius: 4px; font-size: 13px;
+    }
+    .bad-input{ outline: 2px solid #e65100; background: #fff3e0; }
+    .ok-msg{ color: #2e7d32; }
+    .bad-msg{ color: #b71c1c; }
+
+
+    /* Apila con espacio las tarjetas internas del QA */
+      #hist-qa{
+        display: flex;
+        flex-direction: column;
+        gap: 12px;            /* separa “Fuente interna” y “Externo” */
+      }
+      #hist-qa .card{
+        position: static;     /* por si alguna card heredó posicionamiento raro */
+        margin: 0;            /* evita márgenes que se colapsen */
+      }
+
+
+      /* QA: apila tarjetas en columna con espacio */
+    #hist-qa{
+      display: grid;
+      grid-auto-rows: min-content;
+      row-gap: 14px;
+    }
+
+    /* Cada tarjeta crea su propio contexto de flujo (clear de floats) */
+    #hist-qa .card{
+      display: flow-root;      /* ← clave para evitar que se “encimen” */
+      position: relative;      /* asegúrate de que no herede absolute */
+      margin: 0;               /* márgenes “limpios” */
+      clear: both;             /* por si algo trae float */
+    }
+
+    /* La tabla nunca flota */
+    #hist-qa .qa-table{ float: none; }
 
 
   </style>
@@ -364,11 +407,61 @@
         <div class="card"><div class="card-h">Historial por año (votos)</div><canvas id="hist-bar"></canvas></div>
         <div class="card"><div class="card-h">Ganadores 2018–2024 (votos)</div><canvas id="hist-win"></canvas></div>
         <div class="card"><div class="card-h">Competencia 2024 (% del total)</div><canvas id="hist-pie"></canvas></div>
+
+        <div id="hist-qa" class="card" style="display:none">
+          <div class="card-h">Verificación (QA)</div>
+          <div id="hist-qa-context" style="font-size:13px;margin:.25rem 0;"></div>
+            <div id="hist-qa-app" class="card" style="margin-top:.5rem">
+          <div class="card-h">Fuente interna (App/JSON)</div>
+            <table class="qa-table" id="qa-app-table"></table>
+          <div id="qa-app-warn" class="qa-warn"></div>
+        </div>
+          <!-- Aquí luego pondremos tablas de App y Externo -->
+
+        <div id="hist-qa-external" class="card" style="margin-top:.5rem">
+          <div class="card-h">Externo (INE/IEEG)</div>
+
+          <div class="qa-links" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin:.5rem 0;">
+            <label style="display:flex; gap:.25rem; align-items:center;">
+              INE: <input id="qa-url-ine" type="url" placeholder="https://..." style="width:320px;">
+              <button id="qa-open-ine" type="button">Abrir</button>
+            </label>
+            <label style="display:flex; gap:.25rem; align-items:center;">
+              IEEG: <input id="qa-url-ieeg" type="url" placeholder="https://..." style="width:320px;">
+              <button id="qa-open-ieeg" type="button">Abrir</button>
+            </label>
+            <button id="qa-save-urls" type="button">Guardar URLs</button>
+          </div>
+
+          <table class="qa-table" id="qa-ext-table">
+            <thead><tr><th>Campo</th><th>Valor (pegar de INE/IEEG)</th></tr></thead>
+            <tbody>
+              <tr><td>PAN</td><td><input class="qa-num" data-f="PAN" inputmode="numeric"></td></tr>
+              <tr><td>PRI</td><td><input class="qa-num" data-f="PRI" inputmode="numeric"></td></tr>
+              <tr><td>PVEM</td><td><input class="qa-num" data-f="PVEM" inputmode="numeric"></td></tr>
+              <tr><td>MORENA</td><td><input class="qa-num" data-f="MORENA" inputmode="numeric"></td></tr>
+              <tr><td><b>VOTOS (total)</b></td><td><input class="qa-num" data-f="VOTOS" inputmode="numeric"></td></tr>
+              <tr><td>LN</td><td><input class="qa-num" data-f="LN" inputmode="numeric"></td></tr>
+            </tbody>
+          </table>
+
+          <div style="margin-top:.5rem; display:flex; gap:.5rem; align-items:center;">
+            <button id="qa-compare" type="button">Comparar</button>
+            <button id="qa-clear-ext" type="button">Limpiar</button>
+            <span id="qa-compare-result" style="margin-left:.5rem;"></span>
+          </div>
+        </div>
+
+
+
+        </div>
       </div>
+      <label class="qa-toggle" title="Modo Verificación">
+          <input type="checkbox" id="hist-qa-toggle"> QA
+      </label>
+
     </div>
   </div>
-
-
 
 
       <!-- Sprite de íconos (inline, sin dependencias) -->
@@ -542,8 +635,6 @@
   if (window.Chart && window.ChartDataLabels) {
     Chart.register(ChartDataLabels);
   }
-
-
 
 
   // ===== 1) Mapa único y chequeo =====
@@ -1485,6 +1576,8 @@ function runTool(){ /* eliminado: barra vertical */ }
           }
         }
       );
+      if (document.getElementById('hist-qa')?.style.display !== 'none') renderHistQA();
+
 
     }
 
@@ -1502,6 +1595,266 @@ function runTool(){ /* eliminado: barra vertical */ }
     });
 
     
+    function getHistContext(){
+      const sec = (typeof getActiveSectionSec==='function') ? getActiveSectionSec() : null;
+      const selP = document.getElementById('hist-puesto');
+      const selY = document.getElementById('hist-year');
+      const puesto = selP?.value || 'P';
+      const year   = selY?.value || '2024';
+      const label  = (window.PUESTO_LABEL?.[puesto]) || puesto;
+      return { sec, puesto, year, label };
+    }
+
+
+  // Helpers mínimos
+  
+  function fmt(n){ return (n==null || isNaN(n)) ? '—' : Number(n).toLocaleString('es-MX'); }
+  function fmtPct(x){ return (!isFinite(x)) ? '—' : (x.toFixed(1) + '%'); }
+
+  async function getPuestoData(p){
+    window.AT_ELECT = window.AT_ELECT || {};
+    if (window.AT_ELECT[p]) return window.AT_ELECT[p];
+    const paths = JSON.parse(localStorage.getItem('AT_PATHS')||'{}');
+    const url = (paths.electoral && paths.electoral[p]) || `data/electoral/${p}.json`;
+    const res = await fetch(url);
+    const json = await res.json();
+    window.AT_ELECT[p] = json;
+    return json;
+  }
+  function getSlotRow(data, sec, year){
+    // Reutiliza tu helper existente para encontrar la sección
+    const slot = (typeof findSecSlot === 'function')
+      ? findSecSlot(data, sec)
+      : (data?.secciones?.[String(sec)] || null);
+
+    return slot ? (slot[year] || null) : null;
+  }
+
+  function winnerAndMargin(row){
+    const PAN = +row.PAN||0, PRI=+row.PRI||0, PVEM=+row.PVEM||0, MORENA=+row.MORENA||0;
+    const arr = [['PAN',PAN],['PRI',PRI],['PVEM',PVEM],['MORENA',MORENA]].sort((a,b)=>b[1]-a[1]);
+    const gan = arr[0], seg = arr[1] || ['—',0];
+    const votos = +row.VOTOS||0;
+    const margen = (gan[1] - seg[1]);
+    const margenPct = votos>0 ? (margen / votos * 100) : 0;
+    return { ganador: gan[0], margen, margenPct };
+  }           
+
+
+  async function renderHistQA(){
+    const qaBox = document.getElementById('hist-qa');
+    if (!qaBox || qaBox.style.display==='none') return;
+
+    const { sec, puesto, year, label } = getHistContext();
+    const ctx = document.getElementById('hist-qa-context');
+    if (!sec){ ctx.textContent = 'Selecciona una sección en el mapa.'; return; }
+
+    const route = `data/electoral/${puesto}.json → secciones["${String(sec)}"]["${String(year)}"]`;
+    ctx.innerHTML = `
+      <div><b>Contexto:</b> SEC-${sec} · ${label} · ${year}</div>
+      <!-- <div><b>Ruta interna:</b> <code>${route}</code></div> -->
+    `;
+
+    // --- Fuente interna (App/JSON)
+    const tbl = document.getElementById('qa-app-table');
+    const warn = document.getElementById('qa-app-warn');
+    if (!tbl) return;
+
+    const data = await getPuestoData(puesto);
+    const row  = getSlotRow(data, sec, year);
+
+    if (!row){
+      tbl.innerHTML = '<tr><td>No hay datos para esta combinación.</td></tr>';
+      warn.textContent = '';
+      return;
+    }
+
+    const PAN=+row.PAN||0, PRI=+row.PRI||0, PVEM=+row.PVEM||0, MORENA=+row.MORENA||0;
+    const VOTOS=+row.VOTOS||0, LN=+row.LN||0;
+    const totPart = PAN+PRI+PVEM+MORENA;
+    const otros   = VOTOS - totPart;
+    const partPct = (VOTOS>0 && LN>0) ? (VOTOS/LN*100) : NaN;
+    const { ganador, margen, margenPct } = winnerAndMargin(row);
+
+    tbl.innerHTML = `
+      <thead>
+        <tr>
+          <th>Campo</th><th>Valor</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>PAN</td><td>${fmt(PAN)}</td></tr>
+        <tr><td>PRI</td><td>${fmt(PRI)}</td></tr>
+        <tr><td>PVEM</td><td>${fmt(PVEM)}</td></tr>
+        <tr><td>MORENA</td><td>${fmt(MORENA)}</td></tr>
+        <tr><td><b>VOTOS (total)</b></td><td><b>${fmt(VOTOS)}</b></td></tr>
+        <tr><td>LN</td><td>${fmt(LN)}</td></tr>
+        
+        <!-- <tr><td>Total partidos (4)</td><td>${fmt(totPart)}</td></tr> -->
+        <!-- <tr><td>OTROS = VOTOS - Total partidos</td><td class="${otros!==0?'bad-cell':''}">${fmt(otros)}</td></tr> -->
+        <!-- <tr><td>Participación</td><td>${fmtPct(partPct)}</td></tr> -->
+        <!-- <tr><td>Ganador</td><td>${ganador}</td></tr> -->
+        <!-- <tr><td>Margen</td><td>${fmt(margen)} (${fmtPct(margenPct)})</td></tr>// -->
+      </tbody>
+    `;
+
+    warn.textContent = (otros!==0)
+      ? 'Aviso: La suma PAN+PRI+PVEM+MORENA no coincide con VOTOS (hay votos en “OTROS”).'
+      : '';
+
+    // ...después de pintar la tabla interna y calcular row:
+    await wireQAExternal(sec, puesto, year, row);
+
+  }
+
+
+
+    (function wireHistQA(){
+      const tg = document.getElementById('hist-qa-toggle');
+      const qa = document.getElementById('hist-qa');
+      if (!tg || !qa) return;
+
+      tg.addEventListener('change', ()=>{
+        qa.style.display = tg.checked ? 'block' : 'none';
+        if (tg.checked) renderHistQA();
+      });
+
+      // Cuando cambian puesto/año del historial, refrescamos QA si está visible
+      const selP = document.getElementById('hist-puesto');
+      const selY = document.getElementById('hist-year');
+      selP?.addEventListener('change', ()=>{ if (qa.style.display!=='none') renderHistQA(); });
+      selY?.addEventListener('change', ()=>{ if (qa.style.display!=='none') renderHistQA(); });
+    })();
+
+    // --- Utilidades QA externas ---
+    function qaKey(sec, puesto, year){
+      const s = String(sec).replace(/\D+/g,'');
+      return `QA:${s}|${puesto}|${year}`;
+    }
+    function readExtInputs(){
+      const o = {};
+      document.querySelectorAll('#qa-ext-table .qa-num').forEach(inp=>{
+        const f = inp.getAttribute('data-f');
+        const v = inp.value.trim();
+        o[f] = v==='' ? null : Number(v.replace(/[^\d\-]/g,''));
+      });
+      return o;
+    }
+    function fillExtInputs(vals){
+      document.querySelectorAll('#qa-ext-table .qa-num').forEach(inp=>{
+        const f = inp.getAttribute('data-f');
+        const v = (vals && typeof vals[f] !== 'undefined') ? vals[f] : '';
+        inp.value = (v===null || v==='') ? '' : String(v);
+        inp.classList.remove('bad-input');
+      });
+    }
+    function saveQAState(sec, puesto, year, vals, urls){
+      const key = qaKey(sec, puesto, year);
+      const obj = { values: vals||{}, urls: urls||{} };
+      localStorage.setItem(key, JSON.stringify(obj));
+    }
+    function loadQAState(sec, puesto, year){
+      const key = qaKey(sec, puesto, year);
+      try{ return JSON.parse(localStorage.getItem(key)||'null'); }catch(_){ return null; }
+    }
+    function openIf(url){ if(url && /^https?:\/\//i.test(url)) window.open(url,'_blank'); }
+
+    // Reusa winnerAndMargin(row), fmt, fmtPct ya definidos en el PASO 2.
+
+    // --- Cablear la parte externa dentro del render del QA ---
+    async function wireQAExternal(sec, puesto, year, rowInt){
+      // Restaurar guardado (si existe)
+      const saved = loadQAState(sec, puesto, year) || {};
+      fillExtInputs(saved.values||{});
+      document.getElementById('qa-url-ine').value  = saved.urls?.ine  || '';
+      document.getElementById('qa-url-ieeg').value = saved.urls?.ieeg || '';
+
+      // Abrir URLs
+      document.getElementById('qa-open-ine').onclick  = () => openIf(document.getElementById('qa-url-ine').value);
+      document.getElementById('qa-open-ieeg').onclick = () => openIf(document.getElementById('qa-url-ieeg').value);
+
+      // Guardar URLs
+      document.getElementById('qa-save-urls').onclick = () => {
+        const urls = {
+          ine:  document.getElementById('qa-url-ine').value.trim(),
+          ieeg: document.getElementById('qa-url-ieeg').value.trim()
+        };
+        const vals = readExtInputs();
+        saveQAState(sec, puesto, year, vals, urls);
+      };
+
+      // Limpiar
+      document.getElementById('qa-clear-ext').onclick = () => {
+        fillExtInputs({});
+        document.getElementById('qa-compare-result').textContent = '';
+        saveQAState(sec, puesto, year, {}, {
+          ine:  document.getElementById('qa-url-ine').value.trim(),
+          ieeg: document.getElementById('qa-url-ieeg').value.trim()
+        });
+      };
+
+      // Comparar
+      document.getElementById('qa-compare').onclick = () => {
+        const vals = readExtInputs();
+        const res  = document.getElementById('qa-compare-result');
+        // marcar campos vacíos o no numéricos como diferencia
+        document.querySelectorAll('#qa-ext-table .qa-num').forEach(inp=>inp.classList.remove('bad-input'));
+
+        const intPAN=+rowInt.PAN||0, intPRI=+rowInt.PRI||0, intPVEM=+rowInt.PVEM||0, intMORENA=+rowInt.MORENA||0;
+        const intVOT=+rowInt.VOTOS||0,   intLN=+rowInt.LN||0;
+
+        const diffs = [];
+        const fields = ['PAN','PRI','PVEM','MORENA','VOTOS','LN'];
+
+        fields.forEach(f=>{
+          const ext = vals[f];
+          const intv= (f==='PAN')?intPAN:(f==='PRI')?intPRI:(f==='PVEM')?intPVEM:(f==='MORENA')?intMORENA:(f==='VOTOS')?intVOT:intLN;
+          const inp = document.querySelector(`#qa-ext-table .qa-num[data-f="${f}"]`);
+          const mismatch = (ext==null || Number.isNaN(ext) || ext!==intv);
+          if (mismatch){
+            diffs.push(`• ${f}: App=${fmt(intv)} vs Ext=${(ext==null||Number.isNaN(ext))?'—':fmt(ext)}`);
+            inp?.classList.add('bad-input');
+          }
+        });
+
+        // Ganador/Margen externos (si tenemos votos externos)
+        const rowExt = {
+          PAN: +vals.PAN||0, PRI:+vals.PRI||0, PVEM:+vals.PVEM||0, MORENA:+vals.MORENA||0,
+          VOTOS: +vals.VOTOS||0, LN:+vals.LN||0
+        };
+        const gInt = winnerAndMargin(rowInt);
+        const gExt = winnerAndMargin(rowExt);
+
+        if (rowExt.VOTOS>0){
+          if (gInt.ganador !== gExt.ganador)
+            diffs.push(`• Ganador: App=${gInt.ganador} vs Ext=${gExt.ganador}`);
+          // margen % tolerancia 0.1 p.p.
+          const tol = 0.1;
+          if (Math.abs(gInt.margenPct - gExt.margenPct) > tol)
+            diffs.push(`• Margen%: App=${fmtPct(gInt.margenPct)} vs Ext=${fmtPct(gExt.margenPct)}`);
+          if (gInt.margen !== gExt.margen)
+            diffs.push(`• Margen(v): App=${fmt(gInt.margen)} vs Ext=${fmt(gExt.margen)}`);
+        }
+
+        // Mensaje
+        if (diffs.length===0){
+          res.textContent = '✔ Coinciden App y Externo (INE/IEEG).';
+          res.classList.remove('bad-msg'); res.classList.add('ok-msg');
+        }else{
+          res.textContent = '⚠ Diferencias:\n' + diffs.join('\n');
+          res.classList.remove('ok-msg'); res.classList.add('bad-msg');
+        }
+
+        // Guardar lo pegado
+        const urls = {
+          ine:  document.getElementById('qa-url-ine').value.trim(),
+          ieeg: document.getElementById('qa-url-ieeg').value.trim()
+        };
+        saveQAState(sec, puesto, year, vals, urls);
+      };
+    }
+
+
 
   </script>
   <div id="sec-info">
