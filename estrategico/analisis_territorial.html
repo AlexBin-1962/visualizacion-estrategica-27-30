@@ -3243,32 +3243,36 @@ function getDlListFromCatalog(feats){
 </div>
 
 
+    
+
   <!-- Barra superior -->
 <div id="top-toolbar" class="ttb" style="position:absolute; top:12px; right:12px; z-index:5200;">
   <div class="ttb-wrap">
+    <!-- SECCIÓN (requieren sección seleccionada) -->
+    <span class="ttb-label" style="margin-right:6px;">Sección</span>
     <button id="btn-historial" class="ttb-btn" title="Historial (H)">Historial</button>
-    <button id="btn-comp-puesto" class="ttb-btn" title="Comparativa por Puesto (C)" disabled>Comparativa por Puesto</button>
+    <button id="btn-comp-puesto"   class="ttb-btn" title="Comparativa por Puesto (C)" type="button" disabled>Comparativa</button>
     <button id="btn-competitividad" class="ttb-btn" title="Competitividad 2024 (K)" type="button" disabled>Competitividad</button>
-    <button id="btn-top3" class="ttb-btn" title="Top 3 Partidos 2024 (T)" type="button" disabled>Top 3</button>
-    <button id="btn-uhg" class="ttb-btn" title="Historial de ganador (universo) (U)" type="button">Historial ganador (U)</button>
-    <button id="btn-gpa" class="ttb-btn" title="Ganadores por partido por año (Y)" type="button">Ganadores por Año</button>
-    <button id="btn-abst" class="ttb-btn" title="Tendencia de abstención (B)" type="button">Abstención</button>
-    <button id="btn-hhi"  class="ttb-btn" title="Índice HHI 2024 (I)"        type="button">HHI 2024</button>
-
-
+    <button id="btn-top3"          class="ttb-btn" title="Top 3 Partidos 2024 (T)" type="button" disabled>Top 3</button>
+    
 
     <div class="ttb-sep"></div>
-    <label for="comp-metric" class="ttb-label">Métrica</label>
-    <select id="comp-metric" class="ttb-select">
-      <option value="ganador">Ganador + margen</option>
-      <option value="participacion">Participación</option>
-      <!-- futuras: margen-tiempo, swing, h2h, hhi, volatilidad, proyección… -->
-    </select>
-    <button id="btn-abrir-comp" class="ttb-btn ttb-primary" title="Abrir comparativa (C)">Abrir</button>
+
+    <!-- UNIVERSO (estado/mun/DF/DL; siempre habilitados) -->
+    <span class="ttb-label" style="margin-right:6px;">Universo</span>
+    <button id="btn-hist-ganador"  class="ttb-btn" title="Historial de ganador (G)" type="button">Hist. Ganador</button>
+    <button id="btn-gpa"           class="ttb-btn" title="Ganadores por Año (Y)"    type="button">Ganadores por Año</button>
+    <button id="btn-abst"          class="ttb-btn" title="Abstención (B)"           type="button">Abstención</button>
+    <button id="btn-hhi"           class="ttb-btn" title="HHI 2024 (I)"             type="button">Indice de concentracion 2024</button>
+
     <div class="ttb-sep"></div>
-    <button id="btn-ayuda" class="ttb-btn ttb-help" title="Ayuda (?)">Ayuda</button>
+
+    <button id="btn-ayuda"         class="ttb-btn ttb-help" title="Ayuda (?)" type="button">Ayuda</button>
   </div>
 </div>
+
+
+
 
 <!-- Modal de ayuda con acordeón -->
 <div id="help-modal" class="hm" style="display:none">
