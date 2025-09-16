@@ -1465,13 +1465,13 @@ function getDlListFromCatalog(feats){
     })();
 
     function getActiveSectionSec(){
-      const hl=window.__SEC_HL;
-      if(hl?.getLayers){ const lyr=hl.getLayers()[0]; return lyr?.feature?.properties?.SECCION??null; }
-      const t=document.getElementById('si-sec')?.textContent; return t&&t!=='—'?t:null;
-    }
+        const hl=window.__SEC_HL;
+        if(hl?.getLayers){ const lyr=hl.getLayers()[0]; return lyr?.feature?.properties?.SECCION??null; }
+        const t=document.getElementById('si-sec')?.textContent; return t&&t!=='—'?t:null;
+      }
 
     // Compat no-op: por si quedó alguna llamada vieja
-function runTool(){ /* eliminado: barra vertical */ }
+    function runTool(){ /* eliminado: barra vertical */ }
 
 
     // Normaliza: "0007" -> "7", "201" -> "201", 7 -> "7"
@@ -1853,6 +1853,197 @@ function runTool(){ /* eliminado: barra vertical */ }
         saveQAState(sec, puesto, year, vals, urls);
       };
     }
+
+
+    /* ====================== AQUI EMPIEZA MODULO: COMPARATIVA HISTORICA POR PUESTO (AT27_CHP_) ====================== */
+      // Autor: Alex + GPT | Panel movible + redimensionable | Chart.js
+
+      // ---------- Utiles ----------
+      const AT27_CHP_PUESTOS = {
+        'A': 'Ayuntamiento', 'DL': 'Diputado Local', 'DF': 'Diputado Federal',
+        'G': 'Gobernador', 'S': 'Senador', 'P': 'Presidente'
+      };
+      const AT27_CHP_SEXENALES = new Set(['G','S','P']); // solo 2018 y 2024
+      function AT27_CHP_fmt(x){ return Number(x||0).toLocaleString('es-MX'); }
+      function AT27_CHP_getPropsDeSeccion(seccionId){
+        const capa = (window.capasPorSeccion && window.capasPorSeccion[seccionId]) || null;
+        return capa ? (capa.props || capa.properties || {}) : null;
+      }
+      // Colores por partido (fallback determinístico si no está mapeado)
+      const AT27_CHP_COLORS = {
+        'PAN':'#1E88E5','PRI':'#D32F2F','PRD':'#FBC02D','PVEM':'#50E991','PT':'#E64A19',
+        'MC':'#FF9800','MORENA':'#8D4B0F','PES':'#7E57C2','PANAL':'#26C6DA'
+      };
+      function AT27_CHP_colorFor(key){
+        if (AT27_CHP_COLORS[key]) return AT27_CHP_COLORS[key];
+        // fallback: hash to HSL
+        let h=0; for(let i=0;i<key.length;i++) h=(h*31+key.charCodeAt(i))>>>0;
+        return `hsl(${h%360} 70% 45%)`;
+      }
+
+      // ---------- DOM: Panel ----------
+      function AT27_CHP_getOrCreatePanel(){
+        let panel = document.getElementById('AT27_CHP_panel');
+        if (panel) return panel;
+
+        panel = document.createElement('div');
+        panel.id = 'AT27_CHP_panel';
+        Object.assign(panel.style,{
+          position:'fixed', right:'24px', top:'24px', zIndex:9999,
+          width:'460px', height:'360px', background:'#fff',
+          border:'1px solid #e5e7eb', borderRadius:'14px',
+          boxShadow:'0 18px 40px rgba(0,0,0,.18)', overflow:'hidden', resize:'both'
+        });
+
+        panel.innerHTML = `
+          <div id="AT27_CHP_hdr" style="cursor:move; user-select:none; background:#5b21b6; color:#fff; padding:10px 12px; display:flex; align-items:center; gap:10px;">
+            <div style="font-weight:700;">Comparativa Histórica por Puesto</div>
+            <select id="AT27_CHP_selPuesto" title="Puesto" style="margin-left:auto; background:#fff; color:#111827; border-radius:8px; padding:4px 8px; border:none; outline:none;">
+              ${Object.entries(AT27_CHP_PUESTOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+            </select>
+            <button id="AT27_CHP_btnClose" title="Cerrar" style="background:transparent;color:#fff;border:none;font-size:18px;line-height:1;cursor:pointer;">×</button>
+          </div>
+          <div id="AT27_CHP_body" style="padding:10px 12px; height: calc(100% - 96px);">
+            <canvas id="AT27_CHP_canvas" aria-label="Gráfica histórica por puesto"></canvas>
+          </div>
+          <div style="padding:10px 12px; border-top:1px solid #f1f5f9; display:flex; gap:8px; align-items:center;">
+            <div id="AT27_CHP_info" style="font-size:12px;color:#64748b;">—</div>
+            <button id="AT27_CHP_btnPNG" style="margin-left:auto; background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;padding:6px 10px;cursor:pointer;">Exportar PNG</button>
+          </div>
+        `;
+        document.body.appendChild(panel);
+
+        // Cerrar
+        panel.querySelector('#AT27_CHP_btnClose').onclick = ()=> panel.remove();
+
+        // Movible por header
+        AT27_CHP_makeDraggable(panel, panel.querySelector('#AT27_CHP_hdr'));
+
+        // Redibuja al redimensionar
+        new ResizeObserver(()=>{
+          if (window.AT27_CHP_chart) window.AT27_CHP_chart.resize();
+        }).observe(panel);
+
+        // Export PNG
+        panel.querySelector('#AT27_CHP_btnPNG').onclick = ()=>{
+          if (!window.AT27_CHP_chart) return;
+          const url = window.AT27_CHP_chart.toBase64Image();
+          const a = document.createElement('a');
+          a.href = url; a.download = 'comparativa_historica_puesto.png'; a.click();
+        };
+
+        return panel;
+      }
+      function AT27_CHP_makeDraggable(panel, handle){
+        let sx=0, sy=0, ox=0, oy=0, dragging=false;
+        handle.addEventListener('mousedown', (e)=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panel.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
+        window.addEventListener('mousemove', (e)=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panel.style.left=(ox+dx)+'px'; panel.style.top=(oy+dy)+'px'; panel.style.right='auto'; });
+        window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; });
+      }
+
+      // ---------- Datos ----------
+      function AT27_CHP_detectPartidos(props, puesto){
+        const years = ['18','21','24'];
+        const parts = new Set();
+        years.forEach(y=>{
+          const pref = `${y}${puesto}_`;
+          for (const k in props) if (k.startsWith(pref)) parts.add(k.slice(pref.length));
+        });
+        return Array.from(parts);
+      }
+      function AT27_CHP_buildDatasets(props, puesto){
+        const sexenal = AT27_CHP_SEXENALES.has(puesto);
+        const labels = sexenal ? ['2018','2024'] : ['2018','2021','2024'];
+        const years = sexenal ? ['18','24'] : ['18','21','24'];
+        const partidos = AT27_CHP_detectPartidos(props, puesto);
+        const datasets = partidos.map(p=>{
+          const data = years.map(y=> Number(props[`${y}${puesto}_${p}`] || 0));
+          return {
+            label: p,
+            data,
+            borderColor: AT27_CHP_colorFor(p),
+            backgroundColor: AT27_CHP_colorFor(p),
+            tension: 0.25,
+            borderWidth: 2,
+            pointRadius: 3,
+            spanGaps: true
+          };
+        });
+        return { labels, datasets };
+      }
+
+      // ---------- Chart ----------
+      async function AT27_CHP_ensureChartJS(){
+        if (typeof window.Chart !== 'undefined') return;
+        await new Promise((res,rej)=>{
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+          s.onload = res; s.onerror = rej; document.head.appendChild(s);
+        });
+      }
+
+      async function AT27_CHP_renderChart({seccionId, puesto}){
+        await AT27_CHP_ensureChartJS();
+        const panel = AT27_CHP_getOrCreatePanel();
+        const ctx = panel.querySelector('#AT27_CHP_canvas').getContext('2d');
+        const info = panel.querySelector('#AT27_CHP_info');
+
+        const props = AT27_CHP_getPropsDeSeccion(seccionId);
+        if(!props){ alert('No encontré datos de la sección seleccionada.'); return; }
+
+        const { labels, datasets } = AT27_CHP_buildDatasets(props, puesto);
+        info.innerHTML = `Sección <b>${seccionId}</b> · Puesto <b>${AT27_CHP_PUESTOS[puesto]||puesto}</b>`;
+
+        // Destruye instancia anterior si existe
+        if (window.AT27_CHP_chart) { window.AT27_CHP_chart.destroy(); }
+
+        window.AT27_CHP_chart = new Chart(ctx, {
+          type: 'line',
+          data: { labels, datasets },
+          options: {
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top', labels: { boxWidth: 16, usePointStyle: true } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx)=>{
+                    const v = ctx.parsed.y || 0;
+                    return `${ctx.dataset.label}: ${AT27_CHP_fmt(v)}`;
+                  }
+                }
+              },
+              title: { display: true, text: `Histórico por Puesto: ${puesto}` }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { callback: (v)=> AT27_CHP_fmt(v) },
+                grid: { color: 'rgba(0,0,0,.06)' }
+              },
+              x: { grid: { color: 'rgba(0,0,0,.04)' } }
+            }
+          }
+        });
+
+        // Hook del select (cambia puesto y redibuja)
+        const sel = panel.querySelector('#AT27_CHP_selPuesto');
+        sel.onchange = ()=> AT27_CHP_renderChart({seccionId, puesto: sel.value});
+        sel.value = puesto;
+      }
+
+      // ---------- API publica ----------
+      /** Abre el módulo para una sección: seccionId = clave de tu buscador; puestoInicial = 'A'|'DL'|'DF'|'G'|'S'|'P' */
+      function AT27_CHP_ejecutar(seccionId, puestoInicial='A'){
+        try{
+          AT27_CHP_getOrCreatePanel(); // asegura panel
+          AT27_CHP_renderChart({seccionId, puesto: puestoInicial});
+        }catch(err){
+          console.error('AT27_CHP_ejecutar error:', err);
+          alert('Ocurrió un problema al abrir la comparativa histórica.');
+        }
+      }
+      /* ====================== AQUI TERMINA MODULO: COMPARATIVA HISTORICA POR PUESTO (AT27_CHP_) ====================== */
+
 
 
 
