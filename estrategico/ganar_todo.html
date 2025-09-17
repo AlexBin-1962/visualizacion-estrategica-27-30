@@ -13,104 +13,134 @@
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
   <style>
-    html, body { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI', Arial, sans-serif; background:#f4f4f4; }
-    :root{ --sidebar-w:320px; }
-    #panel-lateral{
-      position:absolute;
-      left:0; top:0; bottom:0; width:var(--sidebar-w); height:100%;
-      background: linear-gradient(180deg, #8ea3ad 0%, #dfe6e9 100%);
-      color:#2c3e50; border-right:1px solid #b2bec3;
-      display:flex; flex-direction:column; 
-      box-shadow:2px 0 5px rgba(0,0,0,0.1); box-sizing:border-box; align-items:stretch;
-      z-index:2000;
-    }
-    #panel-header{ background:#b2bec3; color:#2c3e50; padding:12px 15px; display:flex; align-items:center; font-size:18px; font-weight:bold; }
-    #panel-header img{ height:32px; margin-right:10px; }
-    #map{ position:absolute; top:0; left:var(--sidebar-w); width:calc(100% - var(--sidebar-w)); height:100%; }
+        html, body { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI', Arial, sans-serif; background:#f4f4f4; }
+        :root{ --sidebar-w:320px; }
+        #panel-lateral{
+          position:absolute;
+          left:0; top:0; bottom:0; width:var(--sidebar-w); height:100%;
+          background: linear-gradient(180deg, #8ea3ad 0%, #dfe6e9 100%);
+          color:#2c3e50; border-right:1px solid #b2bec3;
+          display:flex; flex-direction:column; 
+          box-shadow:2px 0 5px rgba(0,0,0,0.1); box-sizing:border-box; align-items:stretch;
+          z-index:2000;
+        }
+        #panel-header{ background:#b2bec3; color:#2c3e50; padding:12px 15px; display:flex; align-items:center; font-size:18px; font-weight:bold; }
+        #panel-header img{ height:32px; margin-right:10px; }
+        #map{ position:absolute; top:0; left:var(--sidebar-w); width:calc(100% - var(--sidebar-w)); height:100%; }
 
-    #sec-search    { position: relative; }                /* contenedor del buscador */
-    #sec-suggest   { z-index: 3000; } 
-    #sec-suggest {
+        #sec-search    { position: relative; }                /* contenedor del buscador */
+        #sec-suggest   { z-index: 3000; } 
+        #sec-suggest {
+          position: absolute;
+          left: 12px; right: 12px;
+          top: 46px;           /* ajusta según tu input */
+          max-height: 220px;
+          overflow: auto;
+        }
+          /* la lista queda clickeable */
+
+    /* Etiqueta de la SECCIÓN seleccionada (rosa tenue) */
+    .sec-label{
+      background: rgba(255, 235, 238, 0.96);  /* #ffebee */
+      border: 1px solid #e91e63;
+      color: #880e4f;
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,.15);
+    }
+
+    /* Etiquetas de SECCIONES ADYACENTES (azul/gris tenue) */
+    .sec-label-adj{
+      background: rgba(227, 242, 253, 0.94);  /* #e3f2fd */
+      border: 1px solid #64b5f6;
+      color: #0d47a1;
+      padding: 1px 5px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    }
+
+
+    /* Panel flotante sección */
+    #sec-info {
       position: absolute;
-      left: 12px; right: 12px;
-      top: 46px;           /* ajusta según tu input */
-      max-height: 220px;
-      overflow: auto;
+      right: 16px; bottom: 16px;
+      width: 320px; max-width: 38vw; min-width: 260px;
+      background: #ffffff;
+      border: 1px solid #cfd8dc;
+      border-radius: 10px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.15);
+      resize: both; overflow: auto; z-index: 4000;
+      display: none;
+      pointer-events: auto;
     }
-      /* la lista queda clickeable */
+    #sec-info .hdr {
+      cursor: move;
+      display:flex; align-items:center; justify-content:space-between;
+      background: linear-gradient(180deg,#eceff1,#e3f2fd);
+      padding: 8px 12px;
+      border-bottom: 1px solid #cfd8dc;
+      font-weight: 700; color: #263238;
+    }
 
-/* Etiqueta de la SECCIÓN seleccionada (rosa tenue) */
-.sec-label{
-  background: rgba(255, 235, 238, 0.96);  /* #ffebee */
-  border: 1px solid #e91e63;
-  color: #880e4f;
-  padding: 2px 6px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  pointer-events: none;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0,0,0,.15);
-}
+    #sec-info .hdr .btn-close{
+      cursor: pointer;
+      border: none; outline: none;
+      background: #ffcdd2;         /* rosa tenue */
+      color: #880e4f;
+      width: 24px; height: 24px; line-height: 24px;
+      border-radius: 6px;
+      font-size: 16px; font-weight: 800;
+    }
+    #sec-info .hdr .btn-close:hover{ background:#ef9a9a; }
+    #sec-info .body { padding: 10px 12px; color: #37474f; }
+    #sec-info .row  { display:flex; justify-content:space-between; margin:6px 0; }
+    #sec-info .k    { color:#607d8b; }
+    #sec-info .v    { font-weight:600; }
 
-/* Etiquetas de SECCIONES ADYACENTES (azul/gris tenue) */
-.sec-label-adj{
-  background: rgba(227, 242, 253, 0.94);  /* #e3f2fd */
-  border: 1px solid #64b5f6;
-  color: #0d47a1;
-  padding: 1px 5px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  pointer-events: none;
-  white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0,0,0,.12);
-}
+    /* Toolbar básica (igual look & feel) */
+    .ttb{backdrop-filter: blur(6px); background: rgba(255,255,255,.92); border-radius:12px; 
+        box-shadow: 0 8px 24px rgba(0,0,0,.12); border: 1px solid #e5e7eb;}
+    .ttb-wrap{display:flex; align-items:center; gap:6px; padding:6px;}
+    .ttb-btn{background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; cursor:pointer;}
+    .ttb-btn:hover{background:#f8fafc}
+    .ttb-btn[disabled]{opacity:.45; cursor:not-allowed;}
+    .ttb-sep{width:1px; height:24px; background:#e5e7eb; margin:0 4px;}
+    .ttb-help{background:#eef2ff; border-color:#c7d2fe}
 
-
-/* Panel flotante sección */
-#sec-info {
-  position: absolute;
-  right: 16px; bottom: 16px;
-  width: 320px; max-width: 38vw; min-width: 260px;
-  background: #ffffff;
-  border: 1px solid #cfd8dc;
-  border-radius: 10px;
-  box-shadow: 0 10px 24px rgba(0,0,0,.15);
-  resize: both; overflow: auto; z-index: 4000;
-  display: none;
-  pointer-events: auto;
-}
-#sec-info .hdr {
-  cursor: move;
-  display:flex; align-items:center; justify-content:space-between;
-  background: linear-gradient(180deg,#eceff1,#e3f2fd);
-  padding: 8px 12px;
-  border-bottom: 1px solid #cfd8dc;
-  font-weight: 700; color: #263238;
-}
-
-#sec-info .hdr .btn-close{
-  cursor: pointer;
-  border: none; outline: none;
-  background: #ffcdd2;         /* rosa tenue */
-  color: #880e4f;
-  width: 24px; height: 24px; line-height: 24px;
-  border-radius: 6px;
-  font-size: 16px; font-weight: 800;
-}
-#sec-info .hdr .btn-close:hover{ background:#ef9a9a; }
-#sec-info .body { padding: 10px 12px; color: #37474f; }
-#sec-info .row  { display:flex; justify-content:space-between; margin:6px 0; }
-#sec-info .k    { color:#607d8b; }
-#sec-info .v    { font-weight:600; }
  
-
-
-
   </style>
 </head>
 <body>
+
+  
+    <!-- Barra superior -->
+    <div id="top-toolbar" class="ttb" style="position:absolute; top:12px; right:10px; z-index:5200;">
+      <div class="ttb-wrap">
+        <button id="btn-gt-part" class="ttb-btn" title="Participación 21/24/27*" type="button">
+          <span class="ico">🗳️</span><span class="txt">Part. 21/24/27*</span>
+        </button>
+
+        <button id="btn-estabilidad" class="ttb-btn" title="Estabilidad 2018–2024" type="button">
+          <span class="ico">🧭</span><span class="txt">Estabilidad 18–24</span>
+        </button>
+
+
+        <div class="ttb-sep"></div>
+
+        <button id="btn-ayuda" class="ttb-btn ttb-help" title="Ayuda (?)" type="button">
+          <span class="ico">❓</span><span class="txt">Ayuda</span>
+        </button>
+      </div>
+    </div>
+
   <div id="panel-lateral">
     <div id="panel-header">
       <!-- <img src="assets/img/logo.png" alt="Logo"/> -->
@@ -133,6 +163,9 @@
 
 
 
+
+    <!-- Panel flotante de info de sección -->
+
     <div id="mini-universe" style="padding:12px 12px 6px 12px; background:#eef2f7; border-top:1px solid #cbd5e1">
         <div class="row" style="margin-bottom:8px">
             <label><input type="checkbox" id="mini-all-state"> Estado completo</label>
@@ -153,21 +186,32 @@
     </div>
 
   </div>
+
+  <div id="gt-consultas" style="padding:12px; border-top:1px solid #cbd5e1; background:#f8fafc">
+    <div style="font-weight:700; margin-bottom:8px;">Ganar Todo · Consultas</div>
+    <button id="btn-gt-part" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; cursor:pointer;">
+      🗳️ Participación 21/24/27*
+    </button>
+  </div>
+
+
   <div id="map"></div>
 
   <!-- === SCRIPT ÚNICO === -->
   <script>
   // ===== 0) Campos (ajusta si tus nombres son distintos) =====
   // DL = Distrito Local, DF = Distrito Federal
-  const FIELD_KEYS = { mun: 'MUNICIPIO', dl: 'DISTRITO_L', df: 'DISTRITO_F' };
-
+    const FIELD_KEYS = { mun: 'MUNICIPIO', dl: 'DISTRITO_L', df: 'DISTRITO_F' };
 
     const paths = JSON.parse(localStorage.getItem('AT_PATHS')||'{}');
     const urlGeo = paths.geo || 'data/geo/secciones.geojson';
     const catUrl = paths.catalog || 'data/catalogo_territorial.json';
     const ELP = paths.electoral?.P || 'data/electoral/P.json';
-// ...
+  // ...
 
+
+  // Adapter: usa tus JSON electorales del propio archivo
+  window.loadPuesto = window.loadPuesto || getElectData;
 
 
   // ===== 1) Mapa único y chequeo =====
@@ -872,24 +916,29 @@ if (!raw) {
     window.AT_CTX = { universe: u, paths, map: atMap, layer };
 
     function getMunNameFromCatalog(code){
-  const cat = window.AT_CATALOG;
-  if (!cat?.municipios) return String(code ?? '');
-  return cat.municipios[String(code)] || String(code ?? '');
-}
-function getDfListFromCatalog(feats){
-  return (window.AT_CATALOG?.distritos_federales && window.AT_CATALOG.distritos_federales.length)
-    ? window.AT_CATALOG.distritos_federales
-    : uniqSorted(feats.map(f => f.properties?.[FIELD_KEYS.df]));
-}
-function getDlListFromCatalog(feats){
-  return (window.AT_CATALOG?.distritos_locales && window.AT_CATALOG.distritos_locales.length)
-    ? window.AT_CATALOG.distritos_locales
-    : uniqSorted(feats.map(f => f.properties?.[FIELD_KEYS.dl]));
-}
-    initMiniSelector(raw, u);
-    initSectionSearch(window.AT_DATA || raw, u);
+      const cat = window.AT_CATALOG;
+      if (!cat?.municipios) return String(code ?? '');
+      return cat.municipios[String(code)] || String(code ?? '');
+    }
+    function getDfListFromCatalog(feats){
+      return (window.AT_CATALOG?.distritos_federales && window.AT_CATALOG.distritos_federales.length)
+        ? window.AT_CATALOG.distritos_federales
+        : uniqSorted(feats.map(f => f.properties?.[FIELD_KEYS.df]));
+    }
+    function getDlListFromCatalog(feats){
+      return (window.AT_CATALOG?.distritos_locales && window.AT_CATALOG.distritos_locales.length)
+        ? window.AT_CATALOG.distritos_locales
+        : uniqSorted(feats.map(f => f.properties?.[FIELD_KEYS.dl]));
+    }
+        initMiniSelector(raw, u);
+        initSectionSearch(window.AT_DATA || raw, u);  
 
   });
+
+    document.getElementById('btn-gt-part')?.addEventListener('click', () => {
+      AT27_GT_PART_ejecutar('A','2024');
+    });
+
 
   (function wireATHotkeys(){
       if (window.__AT_HOTKEYS) return;
@@ -925,6 +974,376 @@ function getDlListFromCatalog(feats){
     <div class="row"><span class="k">LN (2024)</span>    <span class="v" id="si-ln">—</span></div>
   </div>
 </div>
+
+<script>
+  /* ========== MOD: GANAR TODO · PARTICIPACIÓN (AT27_GT_PART_) ========== */
+    const AT27_GT_PART_PUESTOS = { A:'Ayuntamiento', DL:'Diputado Local', DF:'Diputado Federal', G:'Gobernador', S:'Senador', P:'Presidente' };
+    const AT27_GT_PART_COLORS  = { LOW:'#ef4444', MID:'#facc15', HIGH:'#22c55e' };
+    const AT27_GT_PART_sec  = s => String(s??'').replace(/\D+/g,'');
+    const AT27_GT_PART_yearsFor = p => (['G','S','P'].includes(p) ? ['2018','2024','2027*'] : ['2018','2021','2024','2027*']);
+
+    function AT27_GT_PART_getUniverseSecIds(){
+      const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
+      const ids = [];
+      for (const f of feats){
+        const p = f.properties||{};
+        const id = AT27_GT_PART_sec(p.ID ?? p.Seccion ?? p.SECCION ?? p.seccion ?? p.id ?? p.SECCION);
+        if (id) ids.push(id);
+      }
+      return [...new Set(ids)];
+    }
+
+    function AT27_GT_PART_partPct(row){
+      if (!row) return null;
+      const ln = Number(row.LN||0); if (!ln) return null;
+      let votos = (row.VOTOS!=null) ? Number(row.VOTOS||0) : 0;
+      if (row.VOTOS==null){ for (const [k,v] of Object.entries(row)){ if (k!=='LN'&&k!=='VOTOS') votos += Number(v||0); } }
+      const pct = (votos/ln)*100;
+      return Math.max(0, Math.min(100, pct));
+    }
+
+    // Proyección 2027 (ver explicación en el mensaje)
+    function AT27_GT_PART_project2027(slot, puesto){
+      const p18 = AT27_GT_PART_partPct(slot['2018']);
+      const p21 = AT27_GT_PART_partPct(slot['2021']);
+      const p24 = AT27_GT_PART_partPct(slot['2024']);
+      const vals = [p18,p21,p24].filter(v=>typeof v==='number'&&isFinite(v));
+      if (vals.length===0) return null;
+      if (['G','S','P'].includes(puesto)){
+        const a = (typeof p18==='number')?p18:p24, b = (typeof p24==='number')?p24:p18;
+        const slopePerYear = (b-a)/6;
+        return Math.max(0, Math.min(100, b + 0.6*slopePerYear*3));
+      } else {
+        const pts=[]; if (typeof p18==='number') pts.push({t:0,y:p18,w:1.0}); if (typeof p21==='number') pts.push({t:3,y:p21,w:1.5}); if (typeof p24==='number') pts.push({t:6,y:p24,w:2.0});
+        const W=pts.reduce((a,p)=>a+p.w,0), tbar=pts.reduce((a,p)=>a+p.w*p.t,0)/W, ybar=pts.reduce((a,p)=>a+p.w*p.y,0)/W;
+        const num=pts.reduce((a,p)=>a+p.w*(p.t-tbar)*(p.y-ybar),0), den=pts.reduce((a,p)=>a+p.w*(p.t-tbar)*(p.t-tbar),0)||1e-9;
+        const b1=num/den, b0=ybar-b1*tbar;
+        return Math.max(0, Math.min(100, b0 + b1*9));
+      }
+    }
+
+    function AT27_GT_PART_compute(js, secIds, puesto, year){
+      const perSec = {}; const bins={LOW:0,MID:0,HIGH:0};
+      let lnW=0, partW=0;
+      for (const sec of secIds){
+        const slot = js?.secciones?.[sec]; if (!slot) continue;
+        const pct = (year==='2027*') ? AT27_GT_PART_project2027(slot, puesto) : AT27_GT_PART_partPct(slot[year]);
+        if (pct==null || !isFinite(pct)) continue;
+        perSec[sec]=pct;
+        if (pct<30) bins.LOW++; else if (pct<50) bins.MID++; else bins.HIGH++;
+        const rowForLN = (year==='2027*' ? slot['2024'] : slot[year]) || {};
+        const ln = Number(rowForLN?.LN||0); if (ln>0){ lnW += ln; partW += pct*ln; }
+      }
+      const avg = lnW>0 ? (partW/lnW) : NaN;
+      return { perSec, bins, avg };
+    }
+
+    function AT27_GT_PART_clearOverlay(){
+      const map = window.AT_CTX?.map || window.map; if (!map) return;
+      if (window.AT27_GT_PART_LAYER){ try{ map.removeLayer(AT27_GT_PART_LAYER); }catch(_){ } window.AT27_GT_PART_LAYER=null; }
+    }
+
+    function AT27_GT_PART_buildOverlay(perSec){
+      const map = window.AT_CTX?.map || window.map;
+      const base = window.AT_CTX?.layer?.toGeoJSON?.() || window.AT_DATA;
+      if (!map || !base?.features) return;
+      if (map.createPane && !map.getPane('at27_gt_part_pane')){
+        map.createPane('at27_gt_part_pane'); map.getPane('at27_gt_part_pane').style.zIndex=660; map.getPane('at27_gt_part_pane').style.pointerEvents='none';
+      }
+      const geo = { type:'FeatureCollection', features: base.features.filter(f=>{
+        const id = AT27_GT_PART_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+        return perSec[id]!=null;
+      })};
+      const layer = L.geoJSON(geo, {
+        pane:'at27_gt_part_pane',
+        style:f=>{
+          const id = AT27_GT_PART_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+          const pct = perSec[id];
+          const col = (pct<30)?AT27_GT_PART_COLORS.LOW: (pct<50?AT27_GT_PART_COLORS.MID:AT27_GT_PART_COLORS.HIGH);
+          return { color:col, weight:1, opacity:.9, fillColor:col, fillOpacity:.45 };
+        },
+        interactive:false
+      });
+      AT27_GT_PART_clearOverlay(); layer.addTo(map); window.AT27_GT_PART_LAYER=layer;
+    }
+
+    function AT27_GT_PART_getOrCreatePanel(){
+      let panel=document.getElementById('AT27_GT_PART_panel'); if (panel) return panel;
+      panel=document.createElement('div');
+      Object.assign(panel.style,{position:'fixed',right:'32px',top:'32px',zIndex:9999,width:'360px',height:'230px',background:'#fff',border:'1px solid #e5e7eb',borderRadius:'14px',boxShadow:'0 18px 40px rgba(0,0,0,.18)',overflow:'hidden',resize:'both',fontFamily:'system-ui, Segoe UI, Roboto, Arial'});
+      panel.id='AT27_GT_PART_panel';
+      panel.innerHTML=`
+        <div id="AT27_GT_PART_hdr" style="cursor:move; user-select:none; background:#efefef; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
+          <div style="font-weight:800;">Participación por sección</div>
+          <select id="AT27_GT_PART_selYear"   style="margin-left:auto; background:#fff; color:#111827; border-radius:8px; padding:4px 8px; border:none; outline:none;"></select>
+          <select id="AT27_GT_PART_selPuesto" style="background:#fff; color:#111827; border-radius:8px; padding:4px 8px; border:none; outline:none;">
+            ${Object.entries(AT27_GT_PART_PUESTOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+          </select>
+          <button id="AT27_GT_PART_close" title="Cerrar" style="background:transparent;color:#111;border:none;font-size:18px;cursor:pointer;">×</button>
+        </div>
+        <div id="AT27_GT_PART_body" style="padding:10px 12px; height: calc(100% - 50px); overflow:auto;">
+          <div style="margin-bottom:8px;">
+            <div style="font-weight:700;">Leyenda</div>
+            <div style="display:flex; gap:10px; margin-top:6px; font-size:13px;">
+              <div style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block;width:12px;height:12px;background:${AT27_GT_PART_COLORS.LOW};border:1px solid rgba(0,0,0,.2);border-radius:3px;"></span> < 30%</div>
+              <div style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block;width:12px;height:12px;background:${AT27_GT_PART_COLORS.MID};border:1px solid rgba(0,0,0,.2);border-radius:3px;"></span> 30–50%</div>
+              <div style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block;width:12px;height:12px;background:${AT27_GT_PART_COLORS.HIGH};border:1px solid rgba(0,0,0,.2);border-radius:3px;"></span> > 50%</div>
+            </div>
+          </div>
+          <div id="AT27_GT_PART_stats" style="font-size:13px;color:#334155;"></div>
+        </div>`;
+      document.body.appendChild(panel);
+      panel.querySelector('#AT27_GT_PART_close').onclick=()=>{ AT27_GT_PART_clearOverlay(); panel.remove(); };
+      (function drag(panel,handle){ let drag=false,sx=0,sy=0,bx=0,by=0; handle.addEventListener('mousedown',e=>{drag=true;sx=e.clientX;sy=e.clientY;const r=panel.getBoundingClientRect();bx=r.left;by=r.top;document.body.style.userSelect='none';}); window.addEventListener('mousemove',e=>{if(!drag)return; const dx=e.clientX-sx, dy=e.clientY-sy; panel.style.left=(bx+dx)+'px'; panel.style.top=(by+dy)+'px'; panel.style.right='auto';}); window.addEventListener('mouseup',()=>{drag=false;document.body.style.userSelect='';});})(panel, panel.querySelector('#AT27_GT_PART_hdr'));
+      return panel;
+    }
+
+    function AT27_GT_PART_populateYears(puesto){
+      const panel=AT27_GT_PART_getOrCreatePanel(); const selY=panel.querySelector('#AT27_GT_PART_selYear');
+      const years=AT27_GT_PART_yearsFor(puesto); selY.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join(''); if (years.includes('2024')) selY.value='2024';
+    }
+
+    async function AT27_GT_PART_update(){
+      const panel=AT27_GT_PART_getOrCreatePanel(); const selY=panel.querySelector('#AT27_GT_PART_selYear'); const selP=panel.querySelector('#AT27_GT_PART_selPuesto');
+      const puesto=selP.value, year=selY.value;
+      const secIds=AT27_GT_PART_getUniverseSecIds();
+      const js=await loadPuesto(puesto);
+      const { perSec, bins, avg }=AT27_GT_PART_compute(js, secIds, puesto, year);
+      AT27_GT_PART_buildOverlay(perSec);
+      const total=secIds.length, stats = `
+        <div>Universo: <b>${total}</b> secciones · Puesto <b>${AT27_GT_PART_PUESTOS[puesto]||puesto}</b> · Año <b>${year}</b></div>
+        <div style="margin-top:4px;">Promedio del universo (ponderado por LN): <b>${isFinite(avg)?avg.toFixed(1):'—'}%</b></div>
+        <div style="margin-top:6px; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+          <div><span style="color:${AT27_GT_PART_COLORS.LOW};font-weight:700;">${bins.LOW}</span> <span style="color:#64748b;">(< 30%)</span></div>
+          <div><span style="color:#b45309;font-weight:700;">${bins.MID}</span> <span style="color:#64748b;">(30–50%)</span></div>
+          <div><span style="color:${AT27_GT_PART_COLORS.HIGH};font-weight:700;">${bins.HIGH}</span> <span style="color:#64748b;">(> 50%)</span></div>
+        </div>`;
+      panel.querySelector('#AT27_GT_PART_stats').innerHTML=stats;
+    }
+
+    async function AT27_GT_PART_ejecutar(puestoInicial='A', yearInicial='2024'){
+      const panel=AT27_GT_PART_getOrCreatePanel(); const selY=panel.querySelector('#AT27_GT_PART_selYear'); const selP=panel.querySelector('#AT27_GT_PART_selPuesto');
+      selP.value=puestoInicial; AT27_GT_PART_populateYears(puestoInicial); if ([...selY.options].some(o=>o.value===yearInicial)) selY.value=yearInicial;
+      selP.onchange=()=>{ AT27_GT_PART_populateYears(selP.value); AT27_GT_PART_update(); };
+      selY.onchange=()=> AT27_GT_PART_update();
+      await AT27_GT_PART_update();
+    }
+    /* ============================ FIN MOD ============================ */
+
+</script>
+
+<script>
+  // Usa tu loader de JSON electorales si no existe loadPuesto
+  window.loadPuesto = window.loadPuesto || window.getElectData;
+
+  // Evita que la barra “coma” los clicks/scroll del mapa y cablea el botón
+  (function wireTopBarGT(){
+    const bar = document.getElementById('top-toolbar');
+    if (!bar || bar.__wired) return;
+    if (window.L && L.DomEvent){
+      L.DomEvent.disableClickPropagation(bar);
+      L.DomEvent.disableScrollPropagation(bar);
+    }
+    document.getElementById('btn-gt-part')?.addEventListener('click', () => {
+      // Lanza el panel flotante de Participación (el overlay se pinta en el mapa)
+      AT27_GT_PART_ejecutar('A','2024');
+    });
+
+    document.getElementById('btn-estabilidad')?.addEventListener('click', () => {
+      AT27_EP_ejecutar(); // puesto fijo 'A'
+    });
+
+    document.getElementById('btn-ayuda')?.addEventListener('click', () => {
+      alert('Ganar Todo → Participación: colorea secciones por % de participación (21/24) y proyección 2027*.');
+    });
+    bar.__wired = true;
+  })();
+</script>
+
+<script>
+  /* ================ ESTABILIDAD POLÍTICA 2018–2024 · Ayuntamiento (AT27_EP_) ================ */
+
+  const AT27_EP_COLORS = { HIGH:'#22c55e', MED:'#facc15', LOW:'#ef4444' }; // verde, amarillo, rojo
+  const AT27_EP_sec = s => String(s??'').replace(/\D+/g,'');
+
+  // Universo actual → ids de secciones
+  function AT27_EP_getUniverseSecIds(){
+    const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
+    const ids = [];
+    for (const f of feats){
+      const p = f.properties || {};
+      const id = AT27_EP_sec(p.ID ?? p.Seccion ?? p.SECCION ?? p.seccion ?? p.id);
+      if (id) ids.push(id);
+    }
+    return [...new Set(ids)];
+  }
+
+  // ganador por fila (excluye LN/VOTOS)
+  function AT27_EP_winner(row){
+    if (!row) return null;
+    let best = null, max = -1;
+    for (const [k,v] of Object.entries(row)){
+      if (k==='LN' || k==='VOTOS') continue;
+      const vv = Number(v||0);
+      if (vv > max){ max = vv; best = k.toUpperCase(); }
+    }
+    return best; // null si no hay datos
+  }
+
+  // calcula categoría por sección
+  function AT27_EP_compute(js, secIds){
+    const perSec = {}; // sec -> HIGH/MED/LOW
+    const counts = { HIGH:0, MED:0, LOW:0 };
+    let analyzed = 0;
+
+    for (const sec of secIds){
+      const slot = js?.secciones?.[sec]; if (!slot) continue;
+      const w18 = AT27_EP_winner(slot['2018']);
+      const w21 = AT27_EP_winner(slot['2021']);
+      const w24 = AT27_EP_winner(slot['2024']);
+      if (!w18 || !w21 || !w24) continue; // requiere 3 años
+
+      const uniq = new Set([w18,w21,w24]).size;
+      let cat = null;
+      if (uniq === 1) cat = 'HIGH';
+      else if (uniq === 2) cat = 'MED';
+      else cat = 'LOW';
+
+      perSec[sec] = cat;
+      counts[cat]++; analyzed++;
+    }
+    return { perSec, counts, analyzed };
+  }
+
+  // Overlay Leaflet
+  function AT27_EP_clearOverlay(){
+    const map = window.AT_CTX?.map || window.map;
+    if (!map) return;
+    if (window.AT27_EP_LAYER){
+      try{ map.removeLayer(AT27_EP_LAYER); }catch(_){}
+      window.AT27_EP_LAYER = null;
+    }
+  }
+  function AT27_EP_buildOverlay(perSec){
+    const map = window.AT_CTX?.map || window.map;
+    const base = window.AT_CTX?.layer?.toGeoJSON?.() || window.AT_DATA;
+    if (!map || !base?.features) return;
+
+    if (map.createPane && !map.getPane('at27_ep_pane')){
+      map.createPane('at27_ep_pane');
+      map.getPane('at27_ep_pane').style.zIndex = 665;
+      map.getPane('at27_ep_pane').style.pointerEvents = 'none';
+    }
+
+    const geo = { type:'FeatureCollection', features: base.features.filter(f=>{
+      const id = AT27_EP_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+      return perSec[id]!=null;
+    })};
+
+    const layer = L.geoJSON(geo, {
+      pane: 'at27_ep_pane',
+      style: f=>{
+        const id = AT27_EP_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+        const cat = perSec[id]; const col = AT27_EP_COLORS[cat] || '#94a3b8';
+        return { color: col, weight: 1, opacity: .9, fillColor: col, fillOpacity: .45 };
+      },
+      interactive: false
+    });
+
+    AT27_EP_clearOverlay();
+    layer.addTo(map);
+    window.AT27_EP_LAYER = layer;
+  }
+
+  // Panel flotante
+  function AT27_EP_getOrCreatePanel(){
+    let panel = document.getElementById('AT27_EP_panel');
+    if (panel) return panel;
+
+    panel = document.createElement('div');
+    panel.id = 'AT27_EP_panel';
+    Object.assign(panel.style,{
+      position:'fixed', right:'32px', top:'32px', zIndex:9999,
+      width:'360px', background:'#fff', border:'1px solid #e5e7eb',
+      borderRadius:'14px', boxShadow:'0 18px 40px rgba(0,0,0,.18)', overflow:'hidden', fontFamily:'system-ui, Segoe UI, Roboto, Arial'
+    });
+    panel.innerHTML = `
+      <div id="AT27_EP_hdr" style="cursor:move; user-select:none; background:#e0e7ff; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
+        <div style="font-weight:800;">Estabilidad Política 2018–2024 · Ayuntamiento</div>
+        <button id="AT27_EP_close" title="Cerrar" style="margin-left:auto;background:transparent;color:#111;border:none;font-size:18px;cursor:pointer;">×</button>
+      </div>
+      <div id="AT27_EP_body" style="padding:12px 14px;">
+        <div style="font-weight:700;margin-bottom:6px;">Leyenda</div>
+        <div style="display:grid; grid-template-columns: 1fr; gap:6px; font-size:13px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:12px;height:12px;border-radius:3px;background:${AT27_EP_COLORS.HIGH};border:1px solid rgba(0,0,0,.15)"></span>
+            Alta (mismo partido 3 elecciones): <b id="AT27_EP_high">0</b>
+            <span id="AT27_EP_high_pct" style="color:#64748b;margin-left:4px;"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:12px;height:12px;border-radius:3px;background:${AT27_EP_COLORS.MED};border:1px solid rgba(0,0,0,.15)"></span>
+            Estabilidad Media (1 cambio): <b id="AT27_EP_med">0</b>
+            <span id="AT27_EP_med_pct" style="color:#64748b;margin-left:4px;"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:12px;height:12px;border-radius:3px;background:${AT27_EP_COLORS.LOW};border:1px solid rgba(0,0,0,.15)"></span>
+            Inestabilidad Alta (3 partidos): <b id="AT27_EP_low">0</b>
+            <span id="AT27_EP_low_pct" style="color:#64748b;margin-left:4px;"></span>
+          </div>
+        </div>
+        <div style="margin-top:10px; font-weight:800;">
+          Total secciones analizadas: <span id="AT27_EP_total">0</span>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    panel.querySelector('#AT27_EP_close').onclick = ()=>{ AT27_EP_clearOverlay(); panel.remove(); };
+
+    // drag
+    (function drag(panel, handle){
+      let sx=0, sy=0, ox=0, oy=0, dragging=false;
+      handle.addEventListener('mousedown', e=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panel.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
+      window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panel.style.left=(ox+dx)+'px'; panel.style.top=(oy+dy)+'px'; panel.style.right='auto'; });
+      window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; });
+    })(panel, panel.querySelector('#AT27_EP_hdr'));
+
+    return panel;
+  }
+
+  function AT27_EP_render({counts, analyzed}){
+    const panel = AT27_EP_getOrCreatePanel();
+    const pct = (x)=> analyzed>0 ? `(${(x*100/analyzed).toFixed(1)}%)` : '';
+    panel.querySelector('#AT27_EP_high').textContent = counts.HIGH;
+    panel.querySelector('#AT27_EP_med').textContent  = counts.MED;
+    panel.querySelector('#AT27_EP_low').textContent  = counts.LOW;
+    panel.querySelector('#AT27_EP_high_pct').textContent = ' ' + pct(counts.HIGH);
+    panel.querySelector('#AT27_EP_med_pct').textContent  = ' ' + pct(counts.MED);
+    panel.querySelector('#AT27_EP_low_pct').textContent  = ' ' + pct(counts.LOW);
+    panel.querySelector('#AT27_EP_total').textContent    = analyzed;
+  }
+
+  // API pública
+  async function AT27_EP_ejecutar(){
+    try{
+      const secIds = AT27_EP_getUniverseSecIds();
+      if (!secIds.length) return alert('No hay secciones en el universo actual.');
+
+      // Puesto fijo: Ayuntamiento ('A')
+      const js = await (window.loadPuesto ? loadPuesto('A') : getElectData('A'));
+      const { perSec, counts, analyzed } = AT27_EP_compute(js, secIds);
+
+      AT27_EP_buildOverlay(perSec);
+      AT27_EP_render({ counts, analyzed });
+    }catch(e){
+      console.error('AT27_EP_ejecutar error:', e);
+      alert('No pude calcular la estabilidad política.');
+    }
+  }
+  /* ============================ FIN ESTABILIDAD POLÍTICA ============================ */
+
+</script>
+
 
 </body>
 </html>

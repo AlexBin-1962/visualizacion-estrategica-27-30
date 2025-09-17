@@ -352,6 +352,25 @@
     /* La tabla nunca flota */
     #hist-qa .qa-table{ float: none; }
 
+    /* ===== Compact Mode para la barra ===== */
+  #top-toolbar .ttb-btn .ico { display:none; }
+  #top-toolbar.ttb-compact .ttb-btn .txt { display:none; }
+  #top-toolbar.ttb-compact .ttb-btn .ico { display:inline-block; }
+  #top-toolbar.ttb-compact .ttb-btn {
+    width: 36px; height: 36px;
+    padding: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  #top-toolbar.ttb-compact .ttb-label { display:none; }
+  #top-toolbar.ttb-compact .ttb-sep { margin: 0 4px; }
+
+  /* Disabled legible en compacto */
+  .ttb-btn[disabled]{ opacity:.45; cursor:not-allowed; }
+
+  /* Botón toggle (opcional: mini) */
+  #btn-ttb-compact-toggle { width: 32px; height: 32px; padding: 0 6px; }
+
+
 
   </style>
 </head>
@@ -3248,6 +3267,12 @@ function getDlListFromCatalog(feats){
   <!-- Barra superior -->
 <div id="top-toolbar" class="ttb" style="position:absolute; top:12px; right:12px; z-index:5200;">
   <div class="ttb-wrap">
+
+    <!-- Toggle Compact -->
+    <button id="btn-ttb-compact-toggle" class="ttb-btn" title="Compactar barra" type="button">
+      <span class="ico">▤</span><span class="txt">▤</span>
+    </button>
+
     <!-- SECCIÓN (requieren sección seleccionada) -->
     <span class="ttb-label" style="margin-right:6px;">Sección</span>
     <button id="btn-historial" class="ttb-btn" title="Historial (H)">Historial</button>
@@ -3260,7 +3285,7 @@ function getDlListFromCatalog(feats){
 
     <!-- UNIVERSO (estado/mun/DF/DL; siempre habilitados) -->
     <span class="ttb-label" style="margin-right:6px;">Universo</span>
-    <button id="btn-hist-ganador"  class="ttb-btn" title="Historial de ganador (G)" type="button">Hist. Ganador</button>
+  
     <button id="btn-gpa"           class="ttb-btn" title="Ganadores por Año (Y)"    type="button">Ganadores por Año</button>
     <button id="btn-abst"          class="ttb-btn" title="Abstención (B)"           type="button">Abstención</button>
     <button id="btn-hhi"           class="ttb-btn" title="HHI 2024 (I)"             type="button">Indice de concentracion 2024</button>
