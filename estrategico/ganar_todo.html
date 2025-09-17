@@ -120,7 +120,15 @@
       color:#111; border:1px solid #e5e7eb;
       border-radius:8px; padding:6px 8px;
       box-shadow:0 6px 18px rgba(0,0,0,.12);
-}
+    }
+
+    .leaflet-tooltip.at27-tt{
+      background: rgba(255,255,255,.95);
+      color:#111; border:1px solid #e5e7eb;
+      border-radius:8px; padding:6px 8px;
+      box-shadow:0 6px 18px rgba(0,0,0,.12);
+    }
+
 
 
  
@@ -139,6 +147,16 @@
         <button id="btn-estabilidad" class="ttb-btn" title="Estabilidad 2018–2024" type="button">
           <span class="ico">🧭</span><span class="txt">Estabilidad 18–24</span>
         </button>
+
+        <button id="btn-gt-metas" class="ttb-btn" title="Metas de participación 2027*" type="button">
+          <span class="ico">🎯</span><span class="txt">Meta 2027*</span>
+        </button>
+
+        <button id="btn-gt-ganar" class="ttb-btn" title="¿Qué se requiere para ganar todo?" type="button">
+          <span class="ico">🏆</span><span class="txt">Ganar todo</span>
+        </button>
+
+
 
 
         <div class="ttb-sep"></div>
@@ -1161,9 +1179,20 @@ if (!raw) {
       AT27_EP_ejecutar(); // puesto fijo 'A'
     });
 
-    document.getElementById('btn-ayuda')?.addEventListener('click', () => {
-      alert('Ganar Todo → Participación: colorea secciones por % de participación (21/24) y proyección 2027*.');
+    document.getElementById('btn-ayuda')?.addEventListener('click', ()=>{
+      document.getElementById('mini-ayuda-GT')?.scrollIntoView({behavior:'smooth', block:'start'});
     });
+
+    document.getElementById('btn-gt-metas')?.addEventListener('click', () => {
+      AT27_GT_META_ejecutar('A', 50, 3); // puesto A, meta 50%, tolerancia 3 pp
+    });
+
+    document.getElementById('btn-gt-ganar')?.addEventListener('click', () => {
+      AT27_GT_GANAR_ejecutar('A','PAN'); // abre con Ayuntamiento + PAN
+    });
+
+
+
     bar.__wired = true;
   })();
 </script>
@@ -1415,7 +1444,913 @@ async function AT27_EP_ejecutar(puestoInicial='A'){
 }
 /* ====================== FIN upgrades ESTABILIDAD POLÍTICA ====================== */
 
+</script>
+<script>
 
+    /* ========== GANAR TODO · METAS DE PARTICIPACIÓN 2027* (AT27_GT_META_) ========== */
+    /* Universos desde AT_CTX.layer; datos con loadPuesto(puesto)
+      Colorea por sección según p2027* vs meta:
+      - PASS (verde): p2027 ≥ meta
+      - NEAR (amarillo): 0 < meta - p2027 ≤ tolerancia
+      - FAIL (rojo): p2027 < meta - tolerancia
+      Panel con puesto, meta, tolerancia, opacidad, resumen y Top-20 brechas, export PNG. */
+
+    const AT27_GT_META_PUESTOS = { A:'Ayuntamiento', DL:'Diputado Local', DF:'Diputado Federal', G:'Gobernador', S:'Senador', P:'Presidente' };
+    const AT27_GT_META_COLS   = { PASS:'#22c55e', NEAR:'#f59e0b', FAIL:'#ef4444' };
+    const AT27_GT_META_sec    = s => String(s??'').replace(/\D+/g,'');
+    const AT27_GT_META_yearsFor = p => (['G','S','P'].includes(p) ? ['2018','2024'] : ['2018','2021','2024']);
+    let   AT27_GT_META_FILL   = 0.45;  // opacidad overlay
+
+    // -------- Helpers universo / datos --------
+    function AT27_GT_META_getUniverseSecIds(){
+      const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
+      const ids=[]; for (const f of feats){ const p=f.properties||{}; const id=AT27_GT_META_sec(p.ID??p.Seccion??p.SECCION??p.seccion??p.id); if(id) ids.push(id); }
+      return [...new Set(ids)];
+    }
+    function AT27_GT_META_partPct(row){
+      if (!row) return null;
+      const ln = Number(row.LN||0); if (!ln) return null;
+      let votos = (row.VOTOS!=null) ? Number(row.VOTOS||0) : 0;
+      if (row.VOTOS==null){ for (const [k,v] of Object.entries(row)){ if (k!=='LN' && k!=='VOTOS') votos += Number(v||0); } }
+      return Math.max(0, Math.min(100, (votos/ln)*100));
+    }
+    function AT27_GT_META_project2027(slot, puesto){
+      const p18 = AT27_GT_META_partPct(slot['2018']);
+      const p21 = AT27_GT_META_partPct(slot['2021']);
+      const p24 = AT27_GT_META_partPct(slot['2024']);
+      const vals = [p18,p21,p24].filter(v=>typeof v==='number'&&isFinite(v));
+      if (vals.length===0) return null;
+
+      if (['G','S','P'].includes(puesto)){
+        const a = (typeof p18==='number')?p18:p24, b=(typeof p24==='number')?p24:p18;
+        const slopePerYear = (b-a)/6;  // 2018→2024
+        return Math.max(0, Math.min(100, b + 0.6*slopePerYear*3)); // conservador 60%
+      }else{
+        // 2018=0, 2021=3, 2024=6 → 2027=9; pesos 1,1.5,2
+        const pts=[]; if (typeof p18==='number') pts.push({t:0,y:p18,w:1.0}); if (typeof p21==='number') pts.push({t:3,y:p21,w:1.5}); if (typeof p24==='number') pts.push({t:6,y:p24,w:2.0});
+        const W=pts.reduce((a,p)=>a+p.w,0), tbar=pts.reduce((a,p)=>a+p.w*p.t,0)/W, ybar=pts.reduce((a,p)=>a+p.w*p.y,0)/W;
+        const num=pts.reduce((a,p)=>a+p.w*(p.t-tbar)*(p.y-ybar),0), den=pts.reduce((a,p)=>a+p.w*(p.t-tbar)*(p.t-tbar),0)||1e-9;
+        const b1=num/den, b0=ybar-b1*tbar;
+        return Math.max(0, Math.min(100, b0 + b1*9));
+      }
+    }
+    function AT27_GT_META_winner(row){
+      if (!row) return null;
+      let best=null,max=-1; for (const [k,v] of Object.entries(row)){ if (k==='LN'||k==='VOTOS') continue; const vv=Number(v||0); if (vv>max){max=vv; best=k.toUpperCase();} }
+      return best;
+    }
+
+    // -------- Cálculo por sección --------
+    function AT27_GT_META_compute(js, secIds, puesto, metaPct, tolPct){
+      const perSec = {}; // sec -> {cat, p18,p21,p24,p27, delta}  (delta = p27 - meta)
+      const counts = { PASS:0, NEAR:0, FAIL:0 };
+      let lnW=0, p27W=0;  // promedio ponderado por LN (usamos LN 2024)
+
+      for (const sec of secIds){
+        const slot = js?.secciones?.[sec]; if (!slot) continue;
+        const p27  = AT27_GT_META_project2027(slot, puesto);
+        if (p27==null || !isFinite(p27)) continue;
+
+        const p18 = AT27_GT_META_partPct(slot['2018']);
+        const p21 = AT27_GT_META_partPct(slot['2021']);
+        const p24 = AT27_GT_META_partPct(slot['2024']);
+
+        const delta = p27 - metaPct; // + = sobre meta; - = falta
+        let cat = 'PASS';
+        if (delta < -tolPct) cat = 'FAIL';
+        else if (delta < 0)  cat = 'NEAR';
+
+        perSec[sec] = { cat, p18, p21, p24, p27, delta };
+
+        counts[cat]++;
+        const ln = Number((slot['2024']||{}).LN || 0); if (ln>0){ lnW += ln; p27W += p27*ln; }
+      }
+      const avg = lnW>0 ? (p27W/lnW) : NaN;
+      return { perSec, counts, avg };
+    }
+
+    // -------- Overlay Leaflet --------
+    function AT27_GT_META_clearOverlay(){
+      const map = window.AT_CTX?.map || window.map; if (!map) return;
+      if (window.AT27_GT_META_LAYER){ try{ map.removeLayer(AT27_GT_META_LAYER); }catch(_){ } window.AT27_GT_META_LAYER=null; }
+    }
+    function AT27_GT_META_buildOverlay(perSec){
+      const map  = window.AT_CTX?.map || window.map;
+      const base = window.AT_CTX?.layer?.toGeoJSON?.() || window.AT_DATA;
+      if (!map || !base?.features) return;
+
+      if (map.createPane && !map.getPane('at27_gt_meta_pane')){
+        map.createPane('at27_gt_meta_pane');
+        map.getPane('at27_gt_meta_pane').style.zIndex = 670;
+        map.getPane('at27_gt_meta_pane').style.pointerEvents = 'auto'; // hover/click
+      }
+
+      const features = base.features.filter(f=>{
+        const id = AT27_GT_META_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+        return perSec[id]!=null;
+      });
+      const geo = { type:'FeatureCollection', features };
+
+      const layer = L.geoJSON(geo, {
+        pane: 'at27_gt_meta_pane',
+        style: f=>{
+          const id = AT27_GT_META_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+          const col = AT27_GT_META_COLS[ perSec[id].cat ] || '#94a3b8';
+          return { color:col, weight:1, opacity:.9, fillColor:col, fillOpacity:AT27_GT_META_FILL };
+        },
+        onEachFeature: (feature, lyr)=>{
+          const id = AT27_GT_META_sec(feature.properties?.ID ?? feature.properties?.SECCION ?? feature.properties?.id);
+          const info = perSec[id]; if (!info) return;
+          const p = (x)=> (typeof x==='number' && isFinite(x)) ? x.toFixed(1)+'%' : '—';
+          const deltaTxt = (info.delta>=0?'+':'') + (isFinite(info.delta)?info.delta.toFixed(1):'—') + ' pp';
+          const has21 = info.p21!=null && isFinite(info.p21);
+          const seq = has21
+            ? `2018 ${p(info.p18)} → 2021 ${p(info.p21)} → 2024 ${p(info.p24)} → <b>2027* ${p(info.p27)}</b>`
+            : `2018 ${p(info.p18)} → 2024 ${p(info.p24)} → <b>2027* ${p(info.p27)}</b>`;
+          lyr.bindTooltip(`<div style="font-size:12px;">${seq}<br>Δ vs meta: <b>${deltaTxt}</b></div>`, {sticky:true, opacity:0.95, direction:'top', className:'at27-tt'});
+          // Click: si tienes manejador de sección, úsalo
+          lyr.on('click', ()=>{ if (typeof window.openSeccionPanel==='function'){ window.openSeccionPanel(id); } });
+          lyr.on('mouseover', ()=> lyr.setStyle({weight:2}));
+          lyr.on('mouseout',  ()=> lyr.setStyle({weight:1}));
+        }
+      });
+
+      AT27_GT_META_clearOverlay();
+      layer.addTo(map);
+      window.AT27_GT_META_LAYER = layer;
+    }
+    function AT27_GT_META_updateOpacity(){
+      if (window.AT27_GT_META_LAYER) window.AT27_GT_META_LAYER.setStyle({ fillOpacity: AT27_GT_META_FILL });
+    }
+
+    // -------- Panel UI --------
+    function AT27_GT_META_getOrCreatePanel(){
+      let panel = document.getElementById('AT27_GT_META_panel');
+      if (panel) return panel;
+
+      panel = document.createElement('div');
+      panel.id = 'AT27_GT_META_panel';
+      Object.assign(panel.style,{
+        position:'fixed', right:'32px', top:'32px', zIndex:9999,
+        width:'440px', background:'#fff', border:'1px solid #e5e7eb',
+        borderRadius:'14px', boxShadow:'0 18px 40px rgba(0,0,0,.18)',
+        overflow:'hidden', fontFamily:'system-ui, Segoe UI, Roboto, Arial',
+        resize: 'both',
+        minWidth: '360px',
+        minHeight: '260px',
+        display: 'flex',
+        flexDirection: 'column'
+      });
+      panel.innerHTML = `
+        <div id="AT27_GT_META_hdr" style="cursor:move; user-select:none; background:#dcfce7; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
+          <div style="font-weight:800;">Metas de participación 2027*</div>
+          <select id="AT27_GT_META_selPuesto" style="margin-left:auto;background:#fff;color:#111827;border-radius:8px;padding:4px 8px;border:none;outline:none;">
+            ${Object.entries(AT27_GT_META_PUESTOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+          </select>
+          <button id="AT27_GT_META_close" title="Cerrar" style="background:transparent;color:#111;border:none;font-size:18px;cursor:pointer;">×</button>
+        </div>
+        <div id="AT27_GT_META_body" style="padding:12px 14px;">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
+            <label style="display:flex;align-items:center;gap:8px;border:1px solid #e5e7eb;border-radius:10px;padding:8px;">
+              <span style="font-size:12px;color:#334155;">Meta (%)</span>
+              <input id="AT27_GT_META_meta" type="range" min="40" max="70" step="1" value="50" style="flex:1;">
+              <span id="AT27_GT_META_meta_val" style="width:42px;text-align:right;font-variant-numeric:tabular-nums;">50%</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;border:1px solid #e5e7eb;border-radius:10px;padding:8px;">
+              <span style="font-size:12px;color:#334155;">Tolerancia (pp)</span>
+              <input id="AT27_GT_META_tol" type="range" min="0" max="5" step="0.5" value="3" style="flex:1;">
+              <span id="AT27_GT_META_tol_val" style="width:42px;text-align:right;font-variant-numeric:tabular-nums;">3.0</span>
+            </label>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <div style="font-size:12px;color:#334155;">Opacidad</div>
+            <input id="AT27_GT_META_opacity" type="range" min="0.1" max="0.9" step="0.05" value="${AT27_GT_META_FILL}" style="flex:1;">
+            <button id="AT27_GT_META_export" class="ttb-btn" style="margin-left:6px;">Exportar PNG</button>
+          </div>
+
+          <div id="AT27_GT_META_summary" style="font-size:13px;color:#334155;margin-bottom:10px;"></div>
+
+          <div style="font-weight:700;margin-bottom:6px;">Leyenda</div>
+          <div id="AT27_GT_META_legend" style="display:grid; grid-template-columns: 1fr; gap:6px; font-size:13px;"></div>
+
+          <div style="font-weight:700;margin:10px 0 6px;">Top 20 – Mayor brecha vs meta</div>
+          <div id="AT27_GT_META_top" style="max-height:220px; overflow:auto; border:1px solid #f1f5f9;border-radius:10px;padding:8px;"></div>
+        </div>
+      `;
+      document.body.appendChild(panel);
+
+      panel.querySelector('#AT27_GT_META_close').onclick = ()=>{ AT27_GT_META_clearOverlay(); panel.remove(); };
+
+      // drag
+      (function drag(panel, handle){
+        let sx=0, sy=0, ox=0, oy=0, dragging=false;
+        handle.addEventListener('mousedown', e=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panel.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
+        window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panel.style.left=(ox+dx)+'px'; panel.style.top=(oy+dy)+'px'; panel.style.right='auto'; });
+        window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; });
+      })(panel, panel.querySelector('#AT27_GT_META_hdr'));
+
+      // listeners del panel
+      const selP = panel.querySelector('#AT27_GT_META_selPuesto');
+      const meta = panel.querySelector('#AT27_GT_META_meta');
+      const tol  = panel.querySelector('#AT27_GT_META_tol');
+      const opa  = panel.querySelector('#AT27_GT_META_opacity');
+
+      meta.addEventListener('input', ()=>{ panel.querySelector('#AT27_GT_META_meta_val').textContent = meta.value+'%'; AT27_GT_META_update(); });
+      tol .addEventListener('input', ()=>{ panel.querySelector('#AT27_GT_META_tol_val').textContent  = Number(tol.value).toFixed(1); AT27_GT_META_update(); });
+      opa .addEventListener('input', e=>{ AT27_GT_META_FILL = Number(e.target.value); AT27_GT_META_updateOpacity(); });
+      panel.querySelector('#AT27_GT_META_export').addEventListener('click', AT27_GT_META_exportPNG);
+
+      return panel;
+    }
+
+    // -------- Render --------
+    function AT27_GT_META_render({puesto, metaPct, tolPct, counts, avg, total, worst}){
+      const panel = AT27_GT_META_getOrCreatePanel();
+      panel.querySelector('#AT27_GT_META_selPuesto').value = puesto;
+
+      panel.querySelector('#AT27_GT_META_summary').innerHTML =
+        `Universo: <b>${total}</b> secciones · Puesto <b>${AT27_GT_META_PUESTOS[puesto]||puesto}</b> · ` +
+        `Meta: <b>${metaPct}%</b> · Tolerancia: <b>${tolPct} pp</b><br>` +
+        `Promedio proyectado 2027* (ponderado LN 2024): <b>${isFinite(avg)?avg.toFixed(1)+'%':'—'}</b>`;
+
+      const pct = (n)=> total>0 ? ` (${(n*100/total).toFixed(1)}%)` : '';
+      panel.querySelector('#AT27_GT_META_legend').innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:12px;height:12px;border-radius:3px;background:${AT27_GT_META_COLS.PASS};border:1px solid rgba(0,0,0,.15)"></span>
+          Cumple meta: <b>${counts.PASS}</b> <span style="color:#64748b;">${pct(counts.PASS)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:12px;height:12px;border-radius:3px;background:${AT27_GT_META_COLS.NEAR};border:1px solid rgba(0,0,0,.15)"></span>
+          Cerca de meta (± ${tolPct} pp): <b>${counts.NEAR}</b> <span style="color:#64748b;">${pct(counts.NEAR)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:12px;height:12px;border-radius:3px;background:${AT27_GT_META_COLS.FAIL};border:1px solid rgba(0,0,0,.15)"></span>
+          Debajo de meta: <b>${counts.FAIL}</b> <span style="color:#64748b;">${pct(counts.FAIL)}</span>
+        </div>
+      `;
+
+      // Top 20 peores brechas
+      const rows = worst.slice(0,20).map(w=>{
+        const id = w.sec;
+        const delta = (w.delta>=0?'+':'') + w.delta.toFixed(1) + ' pp';
+        return `
+          <div style="display:grid; grid-template-columns: 80px 1fr auto; gap:8px; padding:6px 4px; border-bottom:1px solid #f1f5f9;">
+            <div style="color:#64748b;">Sección</div>
+            <div style="font-variant-numeric:tabular-nums;"><b>${id}</b></div>
+            <div style="text-align:right; ${w.delta<0?'color:#ef4444;':''}">${delta}</div>
+            <div></div>
+            <div style="color:#64748b;">p2027*</div>
+            <div style="text-align:right; font-variant-numeric:tabular-nums;">${w.p27.toFixed(1)}%</div>
+          </div>
+        `;
+      }).join('') || '<i style="color:#64748b;">Sin brechas (todas cumplen meta).</i>';
+      panel.querySelector('#AT27_GT_META_top').innerHTML = rows;
+    }
+
+    // -------- Update loop --------
+    async function AT27_GT_META_update(){
+      const panel = AT27_GT_META_getOrCreatePanel();
+      const selP = panel.querySelector('#AT27_GT_META_selPuesto');
+      const meta = panel.querySelector('#AT27_GT_META_meta');
+      const tol  = panel.querySelector('#AT27_GT_META_tol');
+
+      const puesto  = selP.value;
+      const metaPct = Number(meta.value);
+      const tolPct  = Number(tol.value);
+
+      const secIds = AT27_GT_META_getUniverseSecIds();
+      if (!secIds.length) return alert('No hay secciones en el universo actual.');
+
+      const js = await (window.loadPuesto ? loadPuesto(puesto) : getElectData(puesto));
+      const { perSec, counts, avg } = AT27_GT_META_compute(js, secIds, puesto, metaPct, tolPct);
+
+      // overlay
+      AT27_GT_META_buildOverlay(perSec);
+
+      // worst (solo las que NO cumplen)
+      const worst = Object.entries(perSec)
+        .filter(([_,v])=> v.cat!=='PASS')
+        .map(([sec,v])=> ({sec, delta:v.delta, p27:v.p27}))
+        .sort((a,b)=> (a.delta - b.delta)); // más negativo primero
+
+      AT27_GT_META_render({puesto, metaPct, tolPct, counts, avg, total:secIds.length, worst});
+    }
+
+    // -------- Export PNG --------
+    async function AT27_GT_META_exportPNG(){
+      const mapEl = (window.AT_CTX?.map?._container) || document.querySelector('.leaflet-container,#map,#mapid');
+      if (!mapEl){ alert('No encontré el contenedor del mapa.'); return; }
+      async function ensureHtml2Canvas(){
+        if (window.html2canvas) return;
+        await new Promise((resolve, reject)=>{
+          const s=document.createElement('script');
+          s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+          s.onload=resolve; s.onerror=()=>reject(new Error('No pude cargar html2canvas'));
+          document.head.appendChild(s);
+        });
+      }
+      try{
+        await ensureHtml2Canvas();
+        const canvas = await window.html2canvas(mapEl, {useCORS:true, backgroundColor:null, logging:false});
+        const link = document.createElement('a');
+        link.download = `meta_participacion_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }catch(e){
+        console.error(e);
+        alert('No pude exportar PNG (CORS o bloqueo de librería).');
+      }
+    }
+
+    // -------- API pública --------
+    async function AT27_GT_META_ejecutar(puestoInicial='A', metaInicial=50, tolInicial=3){
+      try{
+        // crea panel e inicializa controles
+        const panel = AT27_GT_META_getOrCreatePanel();
+        const selP  = panel.querySelector('#AT27_GT_META_selPuesto');
+        const meta  = panel.querySelector('#AT27_GT_META_meta');
+        const tol   = panel.querySelector('#AT27_GT_META_tol');
+
+        selP.value = puestoInicial;
+        meta.value = String(metaInicial);
+        tol.value  = String(tolInicial);
+        panel.querySelector('#AT27_GT_META_meta_val').textContent = meta.value+'%';
+        panel.querySelector('#AT27_GT_META_tol_val').textContent  = Number(tol.value).toFixed(1);
+
+        // cambia puesto → recalc
+        selP.onchange = AT27_GT_META_update;
+
+        // primer render
+        await AT27_GT_META_update();
+
+        // cerrar panel limpia overlay
+        panel.querySelector('#AT27_GT_META_close').onclick = ()=>{ AT27_GT_META_clearOverlay(); panel.remove(); };
+          }catch(e){
+        console.error('AT27_GT_META_ejecutar error:', e);
+        alert('No pude calcular las metas de participación.');
+      }
+    }
+    /* ======================== FIN · METAS DE PARTICIPACIÓN 2027* ======================== */
+
+
+</script>
+
+<script>
+  // Debounce simple
+  function atDebounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+  // Recalcula cuando el universo (capas visibles) cambia
+  function AT27_GG_bindUniverseAutoRecalc(){
+    const map = window.AT_CTX?.map || window.map;
+    if (!map || map.__ggAuto) return;
+    const recalc = atDebounce(()=>{
+      // Si el panel está abierto, vuelve a ejecutar usando el universo actual
+      if (document.getElementById('AT27_GG_panel')) AT27_GG_run();
+    }, 300);
+    map.on('layeradd', recalc);
+    map.on('layerremove', recalc);
+    map.__ggAuto = true;
+  }
+</script>
+
+<script>
+  /* ====== GANAR TODO · ¿Qué se requiere para ganar todo? (AT27_GT_GANAR_) ====== */
+
+    // Mapa secId -> layer (asegura existencia)
+  window.AT27_GG_LAYERS_BY_SEC = window.AT27_GG_LAYERS_BY_SEC || {};
+  window.AT27_GG_STATE = window.AT27_GG_STATE || { running:false, autorun:false };
+
+  function atDebounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+  function AT27_GG_bindUniverseAutoRecalc(){
+    const map = window.AT_CTX?.map || window.map;
+    if (!map || map.__ggBound) return;
+    const recalc = atDebounce(()=>{
+      // Recalcula SOLO si ya corriste una vez y el panel está abierto
+      if (!document.getElementById('AT27_GG_panel')) return;
+      if (!window.AT27_GG_STATE.autorun) return;
+      if (window.AT27_GG_STATE.running) return;
+      AT27_GG_run();
+    }, 350);
+    map.on('layeradd', recalc);
+    map.on('layerremove', recalc);
+    map.__ggBound = true;
+  }
+
+const AT27_GG_sec = s => String(s??'').replace(/\D+/g,'');
+
+  const AT27_GT_GANAR_PUESTOS = { A:'Ayuntamiento', DL:'Diputado Local', DF:'Diputado Federal' };
+  const AT27_GT_GANAR_PARTIDOS = ['PAN','PRI','PVEM','MORENA'];
+  const AT27_GT_GANAR_COLORS = {
+    PAN:'#2563eb', PRI:'#dc2626', PVEM:'#16a34a', MORENA:'#7a1d1d',
+    OTHER:'#94a3b8'
+  };
+  let AT27_GT_GANAR_FILL = 0.45;
+
+  const AT27_GG_yearsFor = p => (['A','DL','DF'].includes(p) ? ['2018','2021','2024'] : ['2018','2024']); // por si acaso
+
+
+
+  function AT27_GG_getUniverseSecIds(){
+    const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
+    const ids=[]; for (const f of feats){ const p=f.properties||{}; const id=AT27_GG_sec(p.ID??p.Seccion??p.SECCION??p.seccion??p.id); if(id) ids.push(id); }
+    return [...new Set(ids)];
+  }
+
+ function AT27_GG_partPct(row){
+    if (!row) return null;
+    const ln = Number(row.LN||0); if (!ln) return null;
+    let votos = (row.VOTOS!=null) ? Number(row.VOTOS||0) : 0;
+    if (row.VOTOS==null){ for (const [k,v] of Object.entries(row)){ if (k!=='LN' && k!=='VOTOS') votos += Number(v||0); } }
+    return Math.max(0, Math.min(100, (votos/ln)*100));
+  }
+  function AT27_GG_project2027(slot, puesto){
+    const p18 = AT27_GG_partPct(slot['2018']);
+    const p21 = AT27_GG_partPct(slot['2021']);
+    const p24 = AT27_GG_partPct(slot['2024']);
+    const vals = [p18,p21,p24].filter(v=>typeof v==='number'&&isFinite(v));
+    if (vals.length===0) return null;
+    if (['G','S','P'].includes(puesto)){
+      const a = (typeof p18==='number')?p18:p24, b=(typeof p24==='number')?p24:p18;
+      const slopePerYear = (b-a)/6;
+      return Math.max(0, Math.min(100, b + 0.6*slopePerYear*3));
+    }else{
+      const pts=[]; if (typeof p18==='number') pts.push({t:0,y:p18,w:1.0}); if (typeof p21==='number') pts.push({t:3,y:p21,w:1.5}); if (typeof p24==='number') pts.push({t:6,y:p24,w:2.0});
+      const W=pts.reduce((a,p)=>a+p.w,0), tbar=pts.reduce((a,p)=>a+p.w*p.t,0)/W, ybar=pts.reduce((a,p)=>a+p.w*p.y,0)/W;
+      const num=pts.reduce((a,p)=>a+p.w*(p.t-tbar)*(p.y-ybar),0), den=pts.reduce((a,p)=>a+p.w*(p.t-tbar)*(p.t-tbar),0)||1e-9;
+      const b1=num/den, b0=ybar-b1*tbar;
+      return Math.max(0, Math.min(100, b0 + b1*9));
+    }
+  }
+  function AT27_GG_shares2024(row24){
+    if (!row24) return { total:0, shares:{} };
+    let total = (row24.VOTOS!=null) ? Number(row24.VOTOS||0) : 0;
+    if (row24.VOTOS==null){ for (const [k,v] of Object.entries(row24)){ if (k!=='LN' && k!=='VOTOS') total += Number(v||0); } }
+    const shares = {};
+    if (total>0){
+      for (const [k,v] of Object.entries(row24)){
+        if (k==='LN'||k==='VOTOS') continue;
+        shares[k.toUpperCase()] = Number(v||0)/total;
+      }
+    }
+    return { total, shares };
+  }
+
+  function AT27_GG_compute(js, secIds, puesto, partidoSel){
+    const perSec = {};
+    let votosTotalParaGanar = 0, swingTotal=0, ganadas=0;
+    const X = partidoSel.toUpperCase();
+
+    for (const sec of secIds){
+      const slot = js?.secciones?.[sec]; if (!slot) continue;
+      const p27 = AT27_GG_project2027(slot, puesto);
+      const row24 = slot['2024'];
+      if (p27==null || !row24) continue;
+
+      const ln24 = Number(row24.LN||0);
+      if (!ln24) continue;
+
+      const Vproj = ln24 * (p27/100); // float, más estable
+      if (!isFinite(Vproj) || Vproj < 1) continue;
+
+      const { shares, total:tot24 } = AT27_GG_shares2024(row24);
+      if (!Object.keys(shares).length || !tot24) continue;
+
+      // votos base 2027 por partido (manteniendo shares 2024) en float
+      const vBase = {};
+      for (const [sigla,sh] of Object.entries(shares)){
+        vBase[sigla.toUpperCase()] = sh * Vproj;
+      }
+
+      // puntero y tu partido
+      let L=null, vL=-1;
+      for (const [sig, vv] of Object.entries(vBase)){ if (vv>vL){ vL=vv; L=sig; } }
+      const vX = vBase[X] || 0;
+
+      const faltanFloat = Math.max(0, (vL - vX) + 1);
+      const swingFloat  = Math.max(0, faltanFloat / 2);
+
+      perSec[AT27_GG_sec(sec)] = { winner:L, vL, vX, faltan:faltanFloat, swing:swingFloat, p27, Vproj };
+
+      if (faltanFloat<=0 && L===X) ganadas++;
+      votosTotalParaGanar += Math.ceil(faltanFloat);
+      swingTotal         += Math.ceil(swingFloat);
+    }
+
+    return { perSec, resumen: { votosTotalParaGanar, swingTotal, ganadas, total:Object.keys(perSec).length } };
+  }
+
+
+  // ---------- Overlay ----------
+    function AT27_GG_clearOverlay(){
+      const map = window.AT_CTX?.map || window.map; if (!map) return;
+      if (window.AT27_GG_LAYER){ try{ map.removeLayer(AT27_GG_LAYER); }catch(_){ } window.AT27_GG_LAYER=null; }
+      window.AT27_GG_LAYERS_BY_SEC = {}; // reset índice de layers
+    }
+
+    function AT27_GG_buildOverlay(perSec){
+      const map  = window.AT_CTX?.map || window.map;
+      const base = window.AT_CTX?.layer?.toGeoJSON?.() || window.AT_DATA;
+      if (!map || !base?.features) return;
+
+      AT27_GG_clearOverlay(); // <- evita sobreponer capas
+
+      if (map.createPane && !map.getPane('at27_gg_pane')){
+        map.createPane('at27_gg_pane');
+        const p = map.getPane('at27_gg_pane');
+        p.style.zIndex = 675;
+        p.style.pointerEvents = 'auto';
+      }
+
+      const features = base.features.filter(f=>{
+        const id = AT27_GG_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+        return perSec[id]!=null;
+      });
+
+      const layer = L.geoJSON({type:'FeatureCollection', features}, {
+        pane:'at27_gg_pane',
+        style: f=>{
+          const id = AT27_GG_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+          const win = perSec[id]?.winner || 'OTHER';
+          const col = AT27_GT_GANAR_COLORS[win] || AT27_GT_GANAR_COLORS.OTHER;
+          return { color:col, weight:1, opacity:.9, fillColor:col, fillOpacity:AT27_GT_GANAR_FILL };
+        },
+        onEachFeature: (feature, lyr)=>{
+          const idRaw = feature.properties?.ID ?? feature.properties?.SECCION ?? feature.properties?.id;
+          const id    = AT27_GG_sec(idRaw);
+          // indexa con alias (141, 0141, etc.)
+          [ id, id.padStart(4,'0'), String(Number(id)) ].forEach(k => { window.AT27_GG_LAYERS_BY_SEC[k] = lyr; });
+
+          const info = perSec[id]; if (!info) return;
+          const p = (x)=> isFinite(x) ? x.toFixed(1)+'%' : '—';
+          const tip = `<div style="font-size:12px;">
+            Sección <b>${id}</b><br>
+            Proyección 2027*: <b>${p(info.p27)}</b> · Votos proj: <b>${Math.round(info.Vproj).toLocaleString()}</b><br>
+            Líder: <b>${info.winner}</b> ${Math.round(info.vL).toLocaleString()} vs Tú: <b>${Math.round(info.vX).toLocaleString()}</b><br>
+            Faltan: <b>${Math.max(0, Math.ceil(info.faltan)).toLocaleString()}</b> · Swing: <b>${Math.max(0, Math.ceil(info.swing)).toLocaleString()}</b>
+          </div>`;
+          lyr.bindTooltip(tip, { sticky:true, opacity:0.95, direction:'top', className:'at27-tt' });
+          lyr.on('mouseover', ()=> lyr.setStyle({weight:2}));
+          lyr.on('mouseout',  ()=> lyr.setStyle({weight:1}));
+        }
+      });
+
+      layer.addTo(map);
+      window.AT27_GG_LAYER = layer;
+    }
+
+
+  function AT27_GG_updateOpacity(){
+    if (window.AT27_GG_LAYER) window.AT27_GG_LAYER.setStyle({ fillOpacity: AT27_GT_GANAR_FILL });
+  }
+
+
+  function AT27_GG_focusSection(sec){
+    const base = AT27_GG_sec(sec);
+    const dict = window.AT27_GG_LAYERS_BY_SEC || {};
+    const candidates = [ base, base.padStart(4,'0'), String(Number(base)) ];
+    let lyr = null;
+    for (const k of candidates){ if (dict[k]) { lyr = dict[k]; break; } }
+
+    const map = window.AT_CTX?.map || window.map;
+    if (!map){ console.warn('No hay mapa'); return; }
+
+    if (!lyr){
+      // Fallback: buscar el feature en el universo y centrarlo
+      const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
+      const feat = feats.find(f=>{
+        const pid = AT27_GG_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+        const cands = [ pid, pid.padStart(4,'0'), String(Number(pid)) ];
+        return cands.some(x => candidates.includes(x));
+      });
+      if (feat){
+        const tmp = L.geoJSON(feat);
+        try{ map.fitBounds(tmp.getBounds(), {maxZoom:16, padding:[20,20]}); }catch(_){}
+        return;
+      }
+      console.warn('No encontré layer ni feature para', base);
+      return;
+    }
+
+    try{ map.fitBounds(lyr.getBounds(), { maxZoom:16, padding:[20,20] }); }catch(_){}
+    if (lyr.openTooltip) lyr.openTooltip();
+
+    // flash
+    const orig = AT27_GT_GANAR_FILL;
+    lyr.setStyle({ weight:3, fillOpacity:Math.min(0.9, orig+0.25) });
+    if (lyr.bringToFront) lyr.bringToFront();
+    setTimeout(()=> lyr.setStyle({ weight:1, fillOpacity:orig }), 1200);
+  }
+
+
+  // ---------- Panel ----------
+  function AT27_GG_getOrCreatePanel(){
+    let panel = document.getElementById('AT27_GG_panel');
+    if (panel) return panel;
+
+    panel = document.createElement('div');
+    panel.id = 'AT27_GG_panel';
+    Object.assign(panel.style,{
+      position:'fixed', right:'24px', top:'24px', zIndex:9999,
+      width: Math.min(480, window.innerWidth - 64) + 'px', background:'#fff',
+      border:'1px solid #e5e7eb',
+      maxWidth:  'calc(100vw - 48px)',
+      maxHeight: 'calc(100vh - 48px)',
+      borderRadius:'14px', boxShadow:'0 18px 40px rgba(0,0,0,.18)',
+      height:'auto',
+      overflow:'hidden', fontFamily:'system-ui, Segoe UI, Roboto, Arial',
+      resize:'both', minWidth:'360px', minHeight:'300px', display:'flex',
+      flexDirection:'column'
+    });
+    panel.innerHTML = `
+      <div id="AT27_GG_hdr" style="cursor:move; user-select:none; background:#ffe4ef; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
+        <div style="font-weight:800;">¿Qué se requiere para ganar todo?</div>
+        <button id="AT27_GG_close" title="Cerrar" style="margin-left:auto;background:transparent;color:#111;border:none;font-size:18px;cursor:pointer;">×</button>
+      </div>
+      <div id="AT27_GG_body" style="padding:12px 14px; flex:1; overflow:auto;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+          <label style="display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:12px;color:#334155;">Puesto</span>
+            <select id="AT27_GG_selPuesto" style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px;">
+              ${Object.entries(AT27_GT_GANAR_PUESTOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:6px;">
+            <span style="font-size:12px;color:#334155;">Partido</span>
+            <select id="AT27_GG_selPartido" style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px;">
+              ${AT27_GT_GANAR_PARTIDOS.map(p=>`<option>${p}</option>`).join('')}
+            </select>
+          </label>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin:12px 0;">
+          <div style="font-size:12px;color:#334155;">Opacidad</div>
+          <input id="AT27_GG_opacity" type="range" min="0.1" max="0.9" step="0.05" value="${AT27_GT_GANAR_FILL}" style="flex:1;">
+        </div>
+
+        <button id="AT27_GG_run" class="ttb-btn ttb-primary" style="width:100%; background:#f4a3b9; border-color:#f4a3b9; color:#111; font-weight:700;">Ejecutar Consulta</button>
+
+        <div id="AT27_GG_summary" style="margin-top:10px; font-size:13px; color:#334155;"></div>
+
+        <div style="margin-top:10px; border:1px solid #f1f5f9; border-radius:10px; overflow:hidden;">
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead style="background:#f8fafc;">
+              <tr>
+                <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Sección</th>
+                <th style="text-align:left; padding:8px; border-bottom:1px solid #e5e7eb;">Partido Ganador</th>
+                <th style="text-align:right; padding:8px; border-bottom:1px solid #e5e7eb;">Votos</th>
+                <th style="text-align:right; padding:8px; border-bottom:1px solid #e5e7eb;">Faltan</th>
+              </tr>
+            </thead>
+            <tbody id="AT27_GG_tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    function clampToViewport(el){
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const r = el.getBoundingClientRect();
+      let left = r.left, top = r.top;
+      if (r.right  > vw - 16) left -= (r.right  - (vw - 16));
+      if (r.bottom > vh - 16) top  -= (r.bottom - (vh - 16));
+      if (left < 16) left = 16;
+      if (top  < 16) top  = 16;
+      el.style.left = left + 'px';
+      el.style.top  = top  + 'px';
+      el.style.right = 'auto';
+    }
+    clampToViewport(panel);
+    window.addEventListener('resize', ()=>clampToViewport(panel));
+
+
+    panel.querySelector('#AT27_GG_close').onclick = ()=>{ AT27_GG_clearOverlay(); panel.remove(); };
+
+    // drag
+    (function drag(panel, handle){
+      let sx=0, sy=0, ox=0, oy=0, dragging=false;
+      handle.addEventListener('mousedown', e=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panel.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
+      window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panel.style.left=(ox+dx)+'px'; panel.style.top=(oy+dy)+'px'; panel.style.right='auto'; });
+      window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; });
+    })(panel, panel.querySelector('#AT27_GG_hdr'));
+
+    // listeners
+    panel.querySelector('#AT27_GG_opacity').addEventListener('input', e=>{ AT27_GT_GANAR_FILL = Number(e.target.value); AT27_GG_updateOpacity(); });
+
+    return panel;
+  }
+
+    // ---------- Render tabla + resumen ----------
+    function AT27_GG_renderTabla(perSec, partidoSel){
+      const tb = document.getElementById('AT27_GG_tbody');
+      const party = partidoSel.toUpperCase();
+
+      const rows = Object.entries(perSec).map(([sec, info])=>{
+        return { sec: AT27_GG_sec(sec), winner: info.winner, vL: info.vL, faltan: Math.ceil(info.faltan) };
+      }).sort((a,b)=> (a.faltan - b.faltan) || (Number(a.sec) - Number(b.sec)));
+
+      tb.innerHTML = rows.map(r=>{
+        const isWin  = (r.faltan<=0 && r.winner===party);
+        const isLose = (r.winner!==party);
+        const bg = isWin ? '#dcfce7' : (isLose ? '#fee2e2' : '');
+        return `
+          <tr data-sec="${AT27_GG_sec(r.sec)}" style="${bg?`background:${bg};`:''} cursor:pointer;">
+            <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">${r.sec}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9;">${r.winner}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; text-align:right;">${Math.round(r.vL).toLocaleString()}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; text-align:right; ${r.faltan>0?'color:#dc2626;':''}">${r.faltan>0 ? r.faltan.toLocaleString() : '0'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Delegación: un solo listener, aunque repintes la tabla
+      tb.onclick = (e)=>{
+        const tr = e.target.closest('tr[data-sec]');
+        if (!tr) return;
+        const sec = tr.getAttribute('data-sec');
+        AT27_GG_focusSection(sec);
+      };
+    }
+
+
+  function AT27_GG_renderResumen(resumen, partidoSel){
+    const el = document.getElementById('AT27_GG_summary');
+    el.innerHTML = `
+      <div><b>Partido:</b> ${partidoSel}</div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:6px;">
+        <span>Secciones ya ganadas: <b>${resumen.ganadas}</b> / ${resumen.total}</span>
+        <span>Votos para ganar todo: <b>${resumen.votosTotalParaGanar.toLocaleString()}</b></span>
+        <span>Swing total (equivalente): <b>${resumen.swingTotal.toLocaleString()}</b></span>
+      </div>
+    `;
+  }
+
+  // ---------- Update (recalcular) ----------
+  async function AT27_GG_run(){
+    if (window.AT27_GG_STATE.running) return;
+    window.AT27_GG_STATE.running = true;
+    try{
+      const panel   = AT27_GG_getOrCreatePanel();
+      const puesto  = panel.querySelector('#AT27_GG_selPuesto').value;
+      const partido = panel.querySelector('#AT27_GG_selPartido').value;
+
+      const secIds = AT27_GG_getUniverseSecIds();
+      if (!secIds.length){
+        AT27_GG_clearOverlay();
+        document.getElementById('AT27_GG_tbody').innerHTML = '';
+        document.getElementById('AT27_GG_summary').innerHTML = 'Sin secciones en el universo actual.';
+        return;
+      }
+
+      const js = await (window.loadPuesto ? loadPuesto(puesto) : getElectData(puesto));
+      const { perSec, resumen } = AT27_GG_compute(js, secIds, puesto, partido);
+
+      AT27_GG_buildOverlay(perSec);            // 1) pinta y reindexa
+      AT27_GG_renderResumen(resumen, partido); // 2) resumen
+      AT27_GG_renderTabla(perSec, partido);    // 3) tabla (usa índice ya listo)
+    }catch(e){
+      console.error('AT27_GG_run error:', e);
+      alert('No pude ejecutar la consulta de Ganar Todo.');
+    }finally{
+      window.AT27_GG_STATE.running = false;
+    }
+  }
+
+
+  // ---------- API pública ----------
+  async function AT27_GT_GANAR_ejecutar(puestoInicial='A', partidoInicial='PAN'){
+    const panel = AT27_GG_getOrCreatePanel();
+    panel.querySelector('#AT27_GG_selPuesto').value  = puestoInicial;
+    panel.querySelector('#AT27_GG_selPartido').value = partidoInicial;
+
+    // Ejecuta SOLO al presionar el botón
+    panel.querySelector('#AT27_GG_run').onclick = ()=>{
+      window.AT27_GG_STATE.autorun = true; // desde ahora, si cambias universo, recalc
+      AT27_GG_run();
+    };
+
+    // Cambiar selects NO ejecuta automáticamente (tú decides con el botón)
+    panel.querySelector('#AT27_GG_selPuesto').onchange  = ()=>{};
+    panel.querySelector('#AT27_GG_selPartido').onchange = ()=>{};
+
+    AT27_GG_bindUniverseAutoRecalc();
+  }
+
+  /* ======================= FIN · GANAR TODO / GANAR TODO ======================= */
+</script>
+<script>
+  // ========== GANAR TODO · AYUDA (AT27_GT_HELP_) ==========
+  function AT27_GT_HELP_open(){
+    let panel = document.getElementById('AT27_GT_help');
+    if (panel){ panel.style.display='block'; clampToViewport(panel); return; }
+
+    panel = document.createElement('div');
+    panel.id = 'AT27_GT_help';
+    Object.assign(panel.style,{
+      position:'fixed', right:'24px', top:'24px', zIndex:9999,
+      width: Math.min(560, window.innerWidth - 64) + 'px',
+      maxWidth:'calc(100vw - 48px)', maxHeight:'calc(100vh - 48px)',
+      background:'#fff', border:'1px solid #e5e7eb', borderRadius:'14px',
+      boxShadow:'0 18px 40px rgba(0,0,0,.18)', overflow:'hidden',
+      display:'flex', flexDirection:'column', resize:'both',
+      minWidth:'380px', minHeight:'280px'
+    });
+
+    panel.innerHTML = `
+      <div id="AT27_GT_help_hdr" style="cursor:move; user-select:none; background:#f0f9ff; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
+        <div style="font-weight:800;">ℹ️ Minimanual — Ganar Todo</div>
+        <button id="AT27_GT_help_close" title="Cerrar" style="margin-left:auto;background:transparent;color:#111;border:none;font-size:18px;cursor:pointer;">×</button>
+      </div>
+      <div id="AT27_GT_help_body" style="padding:12px 14px; flex:1; overflow:auto; font-family:system-ui,Segoe UI,Roboto,Arial; color:#111;">
+        <p style="margin:0 0 10px; color:#475569; font-size:13px;">
+          Consultas a nivel <b>universo</b> (estado/municipio/DF/DL) con drill-down a sección. Se recalculan con el universo visible.
+        </p>
+
+        <details open style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-weight:700;">Metas de participación 2027*</summary>
+          <div style="margin-top:8px; font-size:13px; color:#334155;">
+            <b>Qué muestra:</b> si cada sección <b>cumple</b> una <b>meta</b> de participación 2027* (verde), está <b>cerca</b> (amarillo) o <b>debajo</b> (rojo).<br>
+            <b>Cómputo:</b> p2027* por regresión ponderada 2018/2021/2024; meta y tolerancia ajustables.<br>
+            <b>Cómo leerlo:</b> prioriza “Near”; revisa promedio ponderado por LN 2024.<br>
+            <b>Notas:</b> proyección conservadora si faltan años.
+          </div>
+        </details>
+
+        <details style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-weight:700;">¿Qué se requiere para ganar todo? (brecha 2027)</summary>
+          <div style="margin-top:8px; font-size:13px; color:#334155;">
+            <b>Qué muestra:</b> para un <i>partido</i> y <i>puesto</i>, colorea por <b>ganador proyectado 2027*</b> (PAN=azul, PRI=rojo, PVEM=verde, MORENA=guinda) y lista por sección:
+            <b>ganador</b>, <b>votos del líder</b>, <b>faltan</b> y <b>swing</b>.<br>
+            <b>Cómputo:</b> Vproj = LN(2024)×p2027*; votos por partido = share(2024)×Vproj; faltan = max(0, vL−vX+1); swing = ceil(faltan/2).<br>
+            <b>Cómo leerlo:</b> la tabla prioriza por menor “faltan”; clic en fila hace zoom y muestra tooltip.<br>
+            <b>Notas:</b> tras el primer “Ejecutar”, si cambias el universo se recalcula solo.
+          </div>
+        </details>
+
+        <details style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-weight:700;">Estabilidad política 2018–2024</summary>
+          <div style="margin-top:8px; font-size:13px; color:#334155;">
+            <b>Qué muestra:</b> continuidad/cambio por sección (verde/amarillo/rojo) en el universo actual.<br>
+            <b>Uso:</b> combina con brecha 2027 para decidir estrategia: <i>“near” + baja estabilidad</i> = oportunidad clara.
+          </div>
+        </details>
+
+        <details style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-weight:700;">Participación 2018/2021/2024 → 2027*</summary>
+          <div style="margin-top:8px; font-size:13px; color:#334155;">
+            <b>Qué muestra:</b> mapa por participación histórica y proyección 2027* con rangos (&lt;30% rojo, 30–50% amarillo, &gt;50% verde).<br>
+            <b>Uso:</b> detección de secciones estructuralmente bajas (movilización).
+          </div>
+        </details>
+
+        <p style="margin:10px 0 0; color:#64748b; font-size:12px;">
+          <b>Limitación:</b> la proyección asume shares 2024 constantes (escenario base). Úsalo como línea base, no como predicción definitiva.
+        </p>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    // cerrar
+    panel.querySelector('#AT27_GT_help_close').onclick = ()=>{ panel.style.display='none'; };
+
+    // drag
+    (function drag(panelEl, handleEl){
+      let sx=0, sy=0, ox=0, oy=0, dragging=false;
+      handleEl.addEventListener('mousedown', e=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panelEl.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
+      window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panelEl.style.left=(ox+dx)+'px'; panelEl.style.top=(oy+dy)+'px'; panelEl.style.right='auto'; });
+      window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; clampToViewport(panelEl); });
+    })(panel, panel.querySelector('#AT27_GT_help_hdr'));
+
+    clampToViewport(panel);
+
+    // Evita que el panel “tape” interacciones del mapa (propagación)
+    if (window.L && L.DomEvent){
+      L.DomEvent.disableClickPropagation(panel);
+      L.DomEvent.disableScrollPropagation(panel);
+    }
+  }
+
+  function clampToViewport(el){
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const r = el.getBoundingClientRect();
+    let left = r.left, top = r.top;
+    if (r.right  > vw - 16) left -= (r.right  - (vw - 16));
+    if (r.bottom > vh - 16) top  -= (r.bottom - (vh - 16));
+    if (left < 16) left = 16;
+    if (top  < 16) top  = 16;
+    el.style.left = left + 'px';
+    el.style.top  = top  + 'px';
+    el.style.right = 'auto';
+  }
+
+  // Cableado del botón de ayuda (por si tu id cambia, intentamos ambos)
+  (function wireGT_Help(){
+    const btn = document.getElementById('btn-ayuda') || document.getElementById('btn-gt-ayuda');
+    if (!btn || btn.__wiredHelp) return;
+    btn.addEventListener('click', AT27_GT_HELP_open);
+    btn.__wiredHelp = true;
+  })();
 </script>
 
 

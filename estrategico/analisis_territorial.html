@@ -3324,12 +3324,9 @@ function getDlListFromCatalog(feats){
           const kind = document.getElementById('comp-metric')?.value || 'ganador';
           if (typeof openComparativaUI === 'function') openComparativaUI(kind);
         });
-        document.getElementById('btn-ayuda')?.addEventListener('click', openHelpModal);
-        // Atajos: H historial, C comparativa, ? ayuda
-        document.addEventListener('keydown', (e)=>{
-          if (e.key==='H' || e.key==='h'){ e.preventDefault(); if (typeof openHistorialUI==='function') openHistorialUI(); }
-          if (e.key==='C' || e.key==='c'){ e.preventDefault(); const k=document.getElementById('comp-metric')?.value||'ganador'; if (typeof openComparativaUI==='function') openComparativaUI(k); }
-          if (e.key==='?' ){ e.preventDefault(); openHelpModal(); }
+
+        document.getElementById('btn-ayuda')?.addEventListener('click', ()=>{
+          document.getElementById('mini-ayuda-AT')?.scrollIntoView({behavior:'smooth', block:'start'});
         });
 
 
@@ -3382,6 +3379,132 @@ function getDlListFromCatalog(feats){
   })();
 
   </script>
+
+  <script>
+  // ========== ANÁLISIS TERRITORIAL · AYUDA (AT27_AT_HELP_) ==========
+  function AT27_AT_HELP_open(){
+    let panel = document.getElementById('AT27_AT_help');
+    if (panel){ panel.style.display='block'; if (typeof clampToViewport==='function') clampToViewport(panel); return; }
+
+    panel = document.createElement('div');
+    panel.id = 'AT27_AT_help';
+    Object.assign(panel.style,{
+      position:'fixed', right:'24px', top:'24px', zIndex:9999,
+      width: Math.min(560, window.innerWidth - 64) + 'px',
+      maxWidth:'calc(100vw - 48px)', maxHeight:'calc(100vh - 48px)',
+      background:'#fff', border:'1px solid #e5e7eb', borderRadius:'14px',
+      boxShadow:'0 18px 40px rgba(0,0,0,.18)', overflow:'hidden',
+      display:'flex', flexDirection:'column', resize:'both',
+      minWidth:'380px', minHeight:'280px', fontFamily:'system-ui,Segoe UI,Roboto,Arial'
+    });
+
+    panel.innerHTML = `
+      <div id="AT27_AT_help_hdr" style="cursor:move; user-select:none; background:#f0fdf4; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
+        <div style="font-weight:800;">ℹ️ Minimanual — Análisis Territorial</div>
+        <button id="AT27_AT_help_close" title="Cerrar" style="margin-left:auto;background:transparent;color:#111;border:none;font-size:18px;cursor:pointer;">×</button>
+      </div>
+      <div id="AT27_AT_help_body" style="padding:12px 14px; flex:1; overflow:auto; color:#111;">
+        <p style="margin:0 0 14px; color:#475569; font-size:13px;">
+          Consultas a nivel <b>sección</b>. Usa el buscador para seleccionar la sección; el panel/tooltip se actualiza con la sección resaltada.
+        </p>
+
+        <details open style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-weight:700;">Comparativa histórica por puesto</summary>
+          <div style="margin-top:8px; font-size:13px; color:#334155;">
+            <b>Qué muestra:</b> línea de votos por elección <b>2018–2021–2024</b> para el <i>puesto seleccionado</i>
+            (en elecciones sexenales muestra <b>2018 y 2024</b>).<br>
+            <b>Cómputo:</b> agrupa totales por año/partido desde los JSON del puesto; el dropdown cambia el puesto.<br>
+            <b>Cómo leerlo:</b> identifica tendencias (crecimiento/caída) y “saltos” por elección.<br>
+            <b>Notas:</b> si falta un año, la serie se interpone con hueco.
+          </div>
+        </details>
+
+        <details style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-weight:700;">Competitividad por sección</summary>
+          <div style="margin-top:8px; font-size:13px; color:#334155;">
+            <b>Qué muestra:</b> mapa por <b>margen</b> del ganador (cerrada, media, holgada) y top de secciones más reñidas.<br>
+            <b>Cómputo:</b> margen = (votos del ganador − votos del 2.º) en pp o votos según modo.<br>
+            <b>Cómo leerlo:</b> prioriza “Near” para campo; el top ordena por menor brecha.<br>
+            <b>Notas:</b> considera votos válidos del año elegido.
+          </div>
+        </details>
+
+        <details style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-weight:700;">Top 3 partidos (2024)</summary>
+          <div style="margin-top:8px; font-size:13px; color:#334155;">
+            <b>Qué muestra:</b> los tres partidos con más votos en 2024 por sección (colores estándar: PAN=azul, PRI=rojo, PVEM=verde, MORENA=guinda; otros=gris).<br>
+            <b>Cómputo:</b> ordena votos 2024 y pinta por ganador; tooltip con Top 3.<br>
+            <b>Cómo leerlo:</b> detecta pluralidad/fragmentación y segundos lugares consistentes.
+          </div>
+        </details>
+
+        <details style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
+          <summary style="cursor:pointer; font-weight:700;">Estabilidad política 2018–2024</summary>
+          <div style="margin-top:8px; font-size:13px; color:#334155;">
+            <b>Qué muestra:</b> continuidad/cambios de ganador 2018→2021→2024:
+            <span style="color:#16a34a;">Verde</span>=alta (mismo partido 3 elecciones),
+            <span style="color:#f59e0b;">Amarillo</span>=media (≥1 cambio),
+            <span style="color:#ef4444;">Rojo</span>=baja (3 distintos).<br>
+            <b>Uso:</b> (verde) bastión; (amarillo) competencia; (rojo) volatilidad.
+          </div>
+        </details>
+
+        <p style="margin:10px 0 0; color:#64748b; font-size:12px;">
+          <b>Tips:</b> usa el slider de opacidad del overlay; clic en una fila/lista centra la sección; exporta PNG si el panel lo incluye.
+        </p>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    // cerrar
+    panel.querySelector('#AT27_AT_help_close').onclick = ()=>{ panel.style.display='none'; };
+
+    // drag
+    (function drag(panelEl, handleEl){
+      let sx=0, sy=0, ox=0, oy=0, dragging=false;
+      handleEl.addEventListener('mousedown', e=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panelEl.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
+      window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panelEl.style.left=(ox+dx)+'px'; panelEl.style.top=(oy+dy)+'px'; panelEl.style.right='auto'; });
+      window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; if (typeof clampToViewport==='function') clampToViewport(panelEl); });
+    })(panel, panel.querySelector('#AT27_AT_help_hdr'));
+
+    if (typeof clampToViewport==='function') clampToViewport(panel);
+
+    // Evita que “tape” interacciones del mapa
+    if (window.L && L.DomEvent){
+      L.DomEvent.disableClickPropagation(panel);
+      L.DomEvent.disableScrollPropagation(panel);
+    }
+  }
+
+  // Utilidad para mantener panel dentro del viewport (define si no existe)
+  if (typeof clampToViewport !== 'function'){
+    function clampToViewport(el){
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const r = el.getBoundingClientRect();
+      let left = r.left, top = r.top;
+      if (r.right  > vw - 16) left -= (r.right  - (vw - 16));
+      if (r.bottom > vh - 16) top  -= (r.bottom - (vh - 16));
+      if (left < 16) left = 16;
+      if (top  < 16) top  = 16;
+      el.style.left = left + 'px';
+      el.style.top  = top  + 'px';
+      el.style.right = 'auto';
+    }
+  }
+
+  // Cableado del botón de ayuda (busca id estándar o alterno)
+  (function wireAT_Help(){
+    const btn = document.getElementById('btn-ayuda') || document.getElementById('btn-at-ayuda');
+    if (!btn || btn.__wiredHelp) return;
+    btn.addEventListener('click', AT27_AT_HELP_open);
+    btn.__wiredHelp = true;
+
+    // (Opcional) tecla ? para abrir
+    document.addEventListener('keydown', (e)=>{
+      if (e.key==='?'){ e.preventDefault(); AT27_AT_HELP_open(); }
+    });
+  })();
+</script>
 
 
 
