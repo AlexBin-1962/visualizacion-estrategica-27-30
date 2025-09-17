@@ -115,6 +115,14 @@
     .ttb-sep{width:1px; height:24px; background:#e5e7eb; margin:0 4px;}
     .ttb-help{background:#eef2ff; border-color:#c7d2fe}
 
+    .leaflet-tooltip.at27-tt{
+      background: rgba(255,255,255,.95);
+      color:#111; border:1px solid #e5e7eb;
+      border-radius:8px; padding:6px 8px;
+      box-shadow:0 6px 18px rgba(0,0,0,.12);
+}
+
+
  
   </style>
 </head>
@@ -1161,186 +1169,252 @@ if (!raw) {
 </script>
 
 <script>
-  /* ================ ESTABILIDAD POLÍTICA 2018–2024 · Ayuntamiento (AT27_EP_) ================ */
+  /* ====== ESTABILIDAD POLÍTICA 2018–2024 con upgrades (AT27_EP_) ====== */
 
-  const AT27_EP_COLORS = { HIGH:'#22c55e', MED:'#facc15', LOW:'#ef4444' }; // verde, amarillo, rojo
-  const AT27_EP_sec = s => String(s??'').replace(/\D+/g,'');
+const AT27_EP_COLORS = { HIGH:'#22c55e', MED:'#facc15', LOW:'#ef4444' }; // verde, amarillo, rojo
+const AT27_EP_PUESTOS = { A:'Ayuntamiento', DL:'Diputado Local', DF:'Diputado Federal', G:'Gobernador', S:'Senador', P:'Presidente' };
+const AT27_EP_sec = s => String(s??'').replace(/\D+/g,'');
+const AT27_EP_yearsFor = p => (['G','S','P'].includes(p) ? ['2018','2024'] : ['2018','2021','2024']);
+let   AT27_EP_FILL_OPACITY = 0.45; // slider
 
-  // Universo actual → ids de secciones
-  function AT27_EP_getUniverseSecIds(){
-    const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
-    const ids = [];
-    for (const f of feats){
-      const p = f.properties || {};
-      const id = AT27_EP_sec(p.ID ?? p.Seccion ?? p.SECCION ?? p.seccion ?? p.id);
-      if (id) ids.push(id);
+// Universo actual → ids
+function AT27_EP_getUniverseSecIds(){
+  const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
+  const ids=[]; for (const f of feats){ const p=f.properties||{}; const id=AT27_EP_sec(p.ID??p.Seccion??p.SECCION??p.seccion??p.id); if(id) ids.push(id); }
+  return [...new Set(ids)];
+}
+
+// ganador por fila (excluye LN/VOTOS)
+function AT27_EP_winner(row){
+  if (!row) return null;
+  let best=null, max=-1;
+  for (const [k,v] of Object.entries(row)){
+    if (k==='LN'||k==='VOTOS') continue;
+    const vv=Number(v||0); if (vv>max){max=vv; best=k.toUpperCase();}
+  }
+  return best;
+}
+
+// cálculo por sección (generalizado a 2 o 3 elecciones)
+function AT27_EP_compute(js, secIds, years){
+  const perSec = {}; // sec -> {cat, winners:{year:party}}
+  const counts = { HIGH:0, MED:0, LOW:0 };
+  let analyzed = 0;
+
+  for (const sec of secIds){
+    const slot = js?.secciones?.[sec]; if (!slot) continue;
+
+    const winners = {};
+    for (const y of years){ winners[y] = AT27_EP_winner(slot[y]); }
+    const vals = years.map(y=>winners[y]).filter(Boolean);
+    if (vals.length < Math.min(2, years.length)) continue; // requiere >=2 datos
+
+    const uniq = new Set(vals).size;
+    let cat;
+    if (years.length === 3){
+      // 2018–2021–2024: Alta=1 partido, Media=2 partidos, Baja=3 partidos
+      cat = (uniq===1) ? 'HIGH' : (uniq===2 ? 'MED' : 'LOW');
+    }else{
+      // sexenales (2018,2024): Alta=igual, Media=diferente (no hay "LOW")
+      cat = (uniq===1) ? 'HIGH' : 'MED';
     }
-    return [...new Set(ids)];
+    perSec[sec] = { cat, winners };
+    counts[cat]++; analyzed++;
+  }
+  return { perSec, counts, analyzed };
+}
+
+// limpiar / construir overlay
+function AT27_EP_clearOverlay(){
+  const map = window.AT_CTX?.map || window.map; if (!map) return;
+  if (window.AT27_EP_LAYER){ try{ map.removeLayer(AT27_EP_LAYER); }catch(_){ } window.AT27_EP_LAYER=null; }
+}
+function AT27_EP_buildOverlay(perSec, years){
+  const map  = window.AT_CTX?.map || window.map;
+  const base = window.AT_CTX?.layer?.toGeoJSON?.() || window.AT_DATA;
+  if (!map || !base?.features) return;
+
+  if (map.createPane && !map.getPane('at27_ep_pane')){
+    map.createPane('at27_ep_pane');
+    map.getPane('at27_ep_pane').style.zIndex = 665;
+    map.getPane('at27_ep_pane').style.pointerEvents = 'auto'; // permitir hover
   }
 
-  // ganador por fila (excluye LN/VOTOS)
-  function AT27_EP_winner(row){
-    if (!row) return null;
-    let best = null, max = -1;
-    for (const [k,v] of Object.entries(row)){
-      if (k==='LN' || k==='VOTOS') continue;
-      const vv = Number(v||0);
-      if (vv > max){ max = vv; best = k.toUpperCase(); }
+  const features = base.features.filter(f=>{
+    const id = AT27_EP_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+    return perSec[id]!=null;
+  });
+  const geo = { type:'FeatureCollection', features };
+
+  const layer = L.geoJSON(geo, {
+    pane: 'at27_ep_pane',
+    style: f=>{
+      const id  = AT27_EP_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+      const cat = perSec[id]?.cat; const col = AT27_EP_COLORS[cat] || '#94a3b8';
+      return { color: col, weight: 1, opacity: .9, fillColor: col, fillOpacity: AT27_EP_FILL_OPACITY };
+    },
+    onEachFeature: (feature, lyr)=>{
+      const id = AT27_EP_sec(feature.properties?.ID ?? feature.properties?.SECCION ?? feature.properties?.id);
+      const info = perSec[id]; if (!info) return;
+      const seq = years.map(y => `${y}: <b>${info.winners[y]||'—'}</b>`).join(' &nbsp;→&nbsp; ');
+      lyr.bindTooltip(`<div style="font-size:12px;">${seq}</div>`, {sticky:true, opacity:0.95, direction:'top', className:'at27-tt'});
+      lyr.on('mouseover', ()=> lyr.setStyle({weight:2}));
+      lyr.on('mouseout',  ()=> lyr.setStyle({weight:1}));
     }
-    return best; // null si no hay datos
-  }
+  });
 
-  // calcula categoría por sección
-  function AT27_EP_compute(js, secIds){
-    const perSec = {}; // sec -> HIGH/MED/LOW
-    const counts = { HIGH:0, MED:0, LOW:0 };
-    let analyzed = 0;
+  AT27_EP_clearOverlay();
+  layer.addTo(map);
+  window.AT27_EP_LAYER = layer;
+}
 
-    for (const sec of secIds){
-      const slot = js?.secciones?.[sec]; if (!slot) continue;
-      const w18 = AT27_EP_winner(slot['2018']);
-      const w21 = AT27_EP_winner(slot['2021']);
-      const w24 = AT27_EP_winner(slot['2024']);
-      if (!w18 || !w21 || !w24) continue; // requiere 3 años
+// actualizar opacidad en caliente
+function AT27_EP_updateOpacity(){
+  if (!window.AT27_EP_LAYER) return;
+  window.AT27_EP_LAYER.setStyle({ fillOpacity: AT27_EP_FILL_OPACITY });
+}
 
-      const uniq = new Set([w18,w21,w24]).size;
-      let cat = null;
-      if (uniq === 1) cat = 'HIGH';
-      else if (uniq === 2) cat = 'MED';
-      else cat = 'LOW';
+// Panel flotante (con puesto, opacidad y export)
+function AT27_EP_getOrCreatePanel(){
+  let panel = document.getElementById('AT27_EP_panel');
+  if (panel) return panel;
 
-      perSec[sec] = cat;
-      counts[cat]++; analyzed++;
-    }
-    return { perSec, counts, analyzed };
-  }
-
-  // Overlay Leaflet
-  function AT27_EP_clearOverlay(){
-    const map = window.AT_CTX?.map || window.map;
-    if (!map) return;
-    if (window.AT27_EP_LAYER){
-      try{ map.removeLayer(AT27_EP_LAYER); }catch(_){}
-      window.AT27_EP_LAYER = null;
-    }
-  }
-  function AT27_EP_buildOverlay(perSec){
-    const map = window.AT_CTX?.map || window.map;
-    const base = window.AT_CTX?.layer?.toGeoJSON?.() || window.AT_DATA;
-    if (!map || !base?.features) return;
-
-    if (map.createPane && !map.getPane('at27_ep_pane')){
-      map.createPane('at27_ep_pane');
-      map.getPane('at27_ep_pane').style.zIndex = 665;
-      map.getPane('at27_ep_pane').style.pointerEvents = 'none';
-    }
-
-    const geo = { type:'FeatureCollection', features: base.features.filter(f=>{
-      const id = AT27_EP_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
-      return perSec[id]!=null;
-    })};
-
-    const layer = L.geoJSON(geo, {
-      pane: 'at27_ep_pane',
-      style: f=>{
-        const id = AT27_EP_sec(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
-        const cat = perSec[id]; const col = AT27_EP_COLORS[cat] || '#94a3b8';
-        return { color: col, weight: 1, opacity: .9, fillColor: col, fillOpacity: .45 };
-      },
-      interactive: false
-    });
-
-    AT27_EP_clearOverlay();
-    layer.addTo(map);
-    window.AT27_EP_LAYER = layer;
-  }
-
-  // Panel flotante
-  function AT27_EP_getOrCreatePanel(){
-    let panel = document.getElementById('AT27_EP_panel');
-    if (panel) return panel;
-
-    panel = document.createElement('div');
-    panel.id = 'AT27_EP_panel';
-    Object.assign(panel.style,{
-      position:'fixed', right:'32px', top:'32px', zIndex:9999,
-      width:'360px', background:'#fff', border:'1px solid #e5e7eb',
-      borderRadius:'14px', boxShadow:'0 18px 40px rgba(0,0,0,.18)', overflow:'hidden', fontFamily:'system-ui, Segoe UI, Roboto, Arial'
-    });
-    panel.innerHTML = `
-      <div id="AT27_EP_hdr" style="cursor:move; user-select:none; background:#e0e7ff; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
-        <div style="font-weight:800;">Estabilidad Política 2018–2024 · Ayuntamiento</div>
-        <button id="AT27_EP_close" title="Cerrar" style="margin-left:auto;background:transparent;color:#111;border:none;font-size:18px;cursor:pointer;">×</button>
+  panel = document.createElement('div');
+  panel.id = 'AT27_EP_panel';
+  Object.assign(panel.style,{
+    position:'fixed', right:'32px', top:'32px', zIndex:9999,
+    width:'380px', background:'#fff', border:'1px solid #e5e7eb',
+    borderRadius:'14px', boxShadow:'0 18px 40px rgba(0,0,0,.18)', overflow:'hidden',
+    fontFamily:'system-ui, Segoe UI, Roboto, Arial'
+  });
+  panel.innerHTML = `
+    <div id="AT27_EP_hdr" style="cursor:move; user-select:none; background:#e0e7ff; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
+      <div style="font-weight:800;">Estabilidad Política 2018–2024</div>
+      <select id="AT27_EP_selPuesto" style="margin-left:auto;background:#fff;color:#111827;border-radius:8px;padding:4px 8px;border:none;outline:none;">
+        ${Object.entries(AT27_EP_PUESTOS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+      </select>
+      <button id="AT27_EP_close" title="Cerrar" style="background:transparent;color:#111;border:none;font-size:18px;cursor:pointer;">×</button>
+    </div>
+    <div id="AT27_EP_body" style="padding:12px 14px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+        <div style="font-size:12px;color:#334155;">Opacidad</div>
+        <input id="AT27_EP_opacity" type="range" min="0.1" max="0.9" step="0.05" value="${AT27_EP_FILL_OPACITY}" style="flex:1;">
+        <button id="AT27_EP_export" class="ttb-btn" style="margin-left:6px;">Exportar PNG</button>
       </div>
-      <div id="AT27_EP_body" style="padding:12px 14px;">
-        <div style="font-weight:700;margin-bottom:6px;">Leyenda</div>
-        <div style="display:grid; grid-template-columns: 1fr; gap:6px; font-size:13px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="width:12px;height:12px;border-radius:3px;background:${AT27_EP_COLORS.HIGH};border:1px solid rgba(0,0,0,.15)"></span>
-            Alta (mismo partido 3 elecciones): <b id="AT27_EP_high">0</b>
-            <span id="AT27_EP_high_pct" style="color:#64748b;margin-left:4px;"></span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="width:12px;height:12px;border-radius:3px;background:${AT27_EP_COLORS.MED};border:1px solid rgba(0,0,0,.15)"></span>
-            Estabilidad Media (1 cambio): <b id="AT27_EP_med">0</b>
-            <span id="AT27_EP_med_pct" style="color:#64748b;margin-left:4px;"></span>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="width:12px;height:12px;border-radius:3px;background:${AT27_EP_COLORS.LOW};border:1px solid rgba(0,0,0,.15)"></span>
-            Inestabilidad Alta (3 partidos): <b id="AT27_EP_low">0</b>
-            <span id="AT27_EP_low_pct" style="color:#64748b;margin-left:4px;"></span>
-          </div>
-        </div>
-        <div style="margin-top:10px; font-weight:800;">
-          Total secciones analizadas: <span id="AT27_EP_total">0</span>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(panel);
+      <div style="font-weight:700;margin-bottom:6px;">Leyenda</div>
+      <div id="AT27_EP_legend" style="display:grid; grid-template-columns: 1fr; gap:6px; font-size:13px;"></div>
+      <div id="AT27_EP_totalBox" style="margin-top:10px; font-weight:800;"></div>
+    </div>
+  `;
+  document.body.appendChild(panel);
 
-    panel.querySelector('#AT27_EP_close').onclick = ()=>{ AT27_EP_clearOverlay(); panel.remove(); };
+  panel.querySelector('#AT27_EP_close').onclick = ()=>{ AT27_EP_clearOverlay(); panel.remove(); };
 
-    // drag
-    (function drag(panel, handle){
-      let sx=0, sy=0, ox=0, oy=0, dragging=false;
-      handle.addEventListener('mousedown', e=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panel.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
-      window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panel.style.left=(ox+dx)+'px'; panel.style.top=(oy+dy)+'px'; panel.style.right='auto'; });
-      window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; });
-    })(panel, panel.querySelector('#AT27_EP_hdr'));
+  // drag
+  (function drag(panel, handle){
+    let sx=0, sy=0, ox=0, oy=0, dragging=false;
+    handle.addEventListener('mousedown', e=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panel.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
+    window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panel.style.left=(ox+dx)+'px'; panel.style.top=(oy+dy)+'px'; panel.style.right='auto'; });
+    window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; });
+  })(panel, panel.querySelector('#AT27_EP_hdr'));
 
-    return panel;
+  // listeners del panel
+  panel.querySelector('#AT27_EP_opacity').addEventListener('input', (e)=>{ AT27_EP_FILL_OPACITY = Number(e.target.value); AT27_EP_updateOpacity(); });
+  panel.querySelector('#AT27_EP_export').addEventListener('click', AT27_EP_exportPNG);
+
+  return panel;
+}
+
+// Rellena leyenda dinámicamente (en sexenales no hay "LOW")
+function AT27_EP_renderLegend(counts, analyzed, years){
+  const LBL = {
+    HIGH: years.length===3 ? 'Alta (mismo partido 3 elecciones)' : 'Alta (mismo partido en todas)',
+    MED : years.length===3 ? 'Estabilidad Media (1 cambio)'      : 'Media (cambio)',
+    LOW : 'Inestabilidad Alta (3 partidos)'
+  };
+  const rows = ['HIGH','MED','LOW'].map(k=>{
+    const hide = (k==='LOW' && years.length===2); // no aplica en 2 elecciones
+    const pct  = analyzed>0 ? ` (${(counts[k]*100/analyzed).toFixed(1)}%)` : '';
+    return hide ? '' : `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:${AT27_EP_COLORS[k]};border:1px solid rgba(0,0,0,.15)"></span>
+        ${LBL[k]}: <b style="margin-left:4px;">${counts[k]}</b>
+        <span style="color:#64748b;margin-left:4px;">${pct}</span>
+      </div>`;
+  }).join('');
+  return rows || '<i style="color:#64748b;">Sin datos suficientes.</i>';
+}
+
+function AT27_EP_render({puesto, counts, analyzed, years}){
+  const panel = AT27_EP_getOrCreatePanel();
+  panel.querySelector('#AT27_EP_selPuesto').value = puesto;
+  panel.querySelector('#AT27_EP_legend').innerHTML = AT27_EP_renderLegend(counts, analyzed, years);
+  panel.querySelector('#AT27_EP_totalBox').innerHTML = `Total secciones analizadas: <span>${analyzed}</span>`;
+}
+
+// Exportar PNG (mapa + lo que se vea encima)
+async function AT27_EP_exportPNG(){
+  const mapEl = (window.AT_CTX?.map?._container) || document.querySelector('.leaflet-container,#map,#mapid');
+  if (!mapEl){ alert('No encontré el contenedor del mapa.'); return; }
+
+  // Carga html2canvas si no está
+  async function ensureHtml2Canvas(){
+    if (window.html2canvas) return;
+    await new Promise((resolve, reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      s.onload=resolve; s.onerror=()=>reject(new Error('No pude cargar html2canvas'));
+      document.head.appendChild(s);
+    });
   }
 
-  function AT27_EP_render({counts, analyzed}){
+  try{
+    await ensureHtml2Canvas();
+    const canvas = await window.html2canvas(mapEl, {useCORS:true, backgroundColor:null, logging:false});
+    const link = document.createElement('a');
+    link.download = `estabilidad_${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }catch(e){
+    console.error(e);
+    alert('No pude exportar PNG (CORS o bloqueo de librería).');
+  }
+}
+
+// API pública
+async function AT27_EP_ejecutar(puestoInicial='A'){
+  try{
     const panel = AT27_EP_getOrCreatePanel();
-    const pct = (x)=> analyzed>0 ? `(${(x*100/analyzed).toFixed(1)}%)` : '';
-    panel.querySelector('#AT27_EP_high').textContent = counts.HIGH;
-    panel.querySelector('#AT27_EP_med').textContent  = counts.MED;
-    panel.querySelector('#AT27_EP_low').textContent  = counts.LOW;
-    panel.querySelector('#AT27_EP_high_pct').textContent = ' ' + pct(counts.HIGH);
-    panel.querySelector('#AT27_EP_med_pct').textContent  = ' ' + pct(counts.MED);
-    panel.querySelector('#AT27_EP_low_pct').textContent  = ' ' + pct(counts.LOW);
-    panel.querySelector('#AT27_EP_total').textContent    = analyzed;
+    const sel   = panel.querySelector('#AT27_EP_selPuesto');
+    sel.value = puestoInicial;
+
+    sel.onchange = async ()=>{
+      const p = sel.value;
+      const years = AT27_EP_yearsFor(p);
+      const ids   = AT27_EP_getUniverseSecIds();
+      if (!ids.length) return alert('No hay secciones en el universo actual.');
+      const js    = await (window.loadPuesto ? loadPuesto(p) : getElectData(p));
+      const { perSec, counts, analyzed } = AT27_EP_compute(js, ids, years);
+      AT27_EP_buildOverlay(perSec, years);
+      AT27_EP_render({puesto:p, counts, analyzed, years});
+    };
+
+    // primer render
+    const p     = sel.value;
+    const years = AT27_EP_yearsFor(p);
+    const ids   = AT27_EP_getUniverseSecIds();
+    if (!ids.length) return alert('No hay secciones en el universo actual.');
+    const js    = await (window.loadPuesto ? loadPuesto(p) : getElectData(p));
+    const { perSec, counts, analyzed } = AT27_EP_compute(js, ids, years);
+    AT27_EP_buildOverlay(perSec, years);
+    AT27_EP_render({puesto:p, counts, analyzed, years});
+  }catch(e){
+    console.error('AT27_EP_ejecutar error:', e);
+    alert('No pude calcular la estabilidad política.');
   }
+}
+/* ====================== FIN upgrades ESTABILIDAD POLÍTICA ====================== */
 
-  // API pública
-  async function AT27_EP_ejecutar(){
-    try{
-      const secIds = AT27_EP_getUniverseSecIds();
-      if (!secIds.length) return alert('No hay secciones en el universo actual.');
-
-      // Puesto fijo: Ayuntamiento ('A')
-      const js = await (window.loadPuesto ? loadPuesto('A') : getElectData('A'));
-      const { perSec, counts, analyzed } = AT27_EP_compute(js, secIds);
-
-      AT27_EP_buildOverlay(perSec);
-      AT27_EP_render({ counts, analyzed });
-    }catch(e){
-      console.error('AT27_EP_ejecutar error:', e);
-      alert('No pude calcular la estabilidad política.');
-    }
-  }
-  /* ============================ FIN ESTABILIDAD POLÍTICA ============================ */
 
 </script>
 
