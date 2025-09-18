@@ -156,6 +156,11 @@
           <span class="ico">🏆</span><span class="txt">Ganar todo</span>
         </button>
 
+        <button id="btn-recentrar" class="ttb-btn" title="Recentrar universo (R)" type="button">
+          Recentrar
+        </button>
+
+
 
 
 
@@ -1191,7 +1196,17 @@ if (!raw) {
       AT27_GT_GANAR_ejecutar('A','PAN'); // abre con Ayuntamiento + PAN
     });
 
+    document.getElementById('btn-recentrar')?.addEventListener('click', () => {
+      AT27_fitUniverseBounds();
+    });
 
+    // Atajo de teclado: R
+    document.addEventListener('keydown', (e)=>{
+      if (e.key === 'R' || e.key === 'r'){
+        e.preventDefault();
+        AT27_fitUniverseBounds();
+      }
+    });
 
     bar.__wired = true;
   })();
@@ -2239,6 +2254,80 @@ const AT27_GG_sec = s => String(s??'').replace(/\D+/g,'');
 
   /* ======================= FIN · GANAR TODO / GANAR TODO ======================= */
 </script>
+
+<script>
+    // Centra el mapa al universo actual (overlay o capa base)
+    function AT27_fitUniverseBounds(paddingPx = 24){
+      const map = window.AT_CTX?.map || window.map;
+      if (!map) return;
+
+      // 1) Si hay overlay (ej. capas pintadas), úsalo
+      const candidates = [];
+      if (window.AT27_GG_LAYER?.getBounds) candidates.push(window.AT27_GG_LAYER.getBounds());
+      if (window.AT27_EP_LAYER?.getBounds) candidates.push(window.AT27_EP_LAYER.getBounds()); // (si tienes Estabilidad)
+      if (window.AT27_PART_LAYER?.getBounds) candidates.push(window.AT27_PART_LAYER.getBounds()); // (si tienes Participación)
+
+      // 2) La capa de universo visible (AT_CTX.layer)
+      const baseLayer = window.AT_CTX?.layer;
+      if (baseLayer?.getBounds) candidates.push(baseLayer.getBounds());
+
+      // 3) Fallback: calcula bounds desde GeoJSON de universo
+      if (!candidates.length){
+        const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
+        if (feats.length){
+          const tmp = L.geoJSON({type:'FeatureCollection', features:feats});
+          candidates.push(tmp.getBounds());
+          // no añadimos tmp al mapa, solo usamos sus bounds
+        }
+      }
+
+      // Unir bounds y centrar
+      let union = null;
+      for (const b of candidates){
+        if (!b || !b.isValid()) continue;
+        union = union ? union.extend(b) : L.latLngBounds(b.getSouthWest(), b.getNorthEast());
+      }
+      if (union && union.isValid()){
+        map.fitBounds(union, { padding:[paddingPx, paddingPx] });
+        requestAnimationFrame(()=> AT27_flashOverlay());
+
+      }
+    }
+</script>
+
+  <script>
+  function AT27__eachPath(layer, fn){
+    if (!layer) return;
+    if (layer.eachLayer) layer.eachLayer(l => AT27__eachPath(l, fn));
+    else if (layer.setStyle) fn(layer);
+  }
+
+  // Resalta brevemente los polígonos del overlay (o la capa base si no hay overlay)
+  function AT27_flashOverlay(duration=900){
+    const overlays = [
+      window.AT27_GG_LAYER,   // Ganar Todo
+      window.AT27_EP_LAYER,   // Estabilidad (si la tienes)
+      window.AT27_PART_LAYER  // Participación (si la tienes)
+    ].filter(Boolean);
+
+    // Si no hay overlay, “flashea” el universo base
+    if (!overlays.length && window.AT_CTX?.layer) overlays.push(window.AT_CTX.layer);
+
+    overlays.forEach(g=>{
+      AT27__eachPath(g, (lyr)=>{
+        const origW  = (lyr.options && lyr.options.weight) || 1;
+        const origFO = (lyr.options && typeof lyr.options.fillOpacity==='number') ? lyr.options.fillOpacity : 0.35;
+        try{
+          lyr.setStyle({ weight: origW + 2, fillOpacity: Math.min(0.95, origFO + 0.25) });
+          setTimeout(()=> lyr.setStyle({ weight: origW, fillOpacity: origFO }), duration);
+        }catch(_){}
+      });
+    });
+  }
+</script>
+
+
+
 <script>
   // ========== GANAR TODO · AYUDA (AT27_GT_HELP_) ==========
   function AT27_GT_HELP_open(){
