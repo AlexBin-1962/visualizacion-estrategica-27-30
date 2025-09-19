@@ -182,6 +182,15 @@
           Impulso
         </button>
 
+        <button id="btn-brecha" class="ttb-btn" title="Mapa de brecha (pp / votos)">
+          Brecha pp/votos
+        </button>
+
+        <button id="btn-sensibilidad-participacion" class="ttb-btn" title="Sensibilidad a participación (±pp)">
+          Sensibilidad p%
+        </button>
+
+
 
         <div class="ttb-sep"></div>
 
@@ -1259,7 +1268,19 @@ if (!raw) {
 
       document.getElementById('btn-simulador-impulso')?.addEventListener('click',() =>{
          AT27_SI_open();
-     });
+      });
+
+          /* ====== Cableado botón ====== */
+    
+      document.getElementById('btn-brecha')?.addEventListener('click',() =>{
+         AT27_BR_open();
+    });
+
+        /* ====== Cableado botón ====== */
+
+      document.getElementById('btn-sensibilidad-participacion')?.addEventListener('click',() =>{
+         AT27_SP_open();
+    });
 
     bar.__wired = true;
   })();
@@ -4798,6 +4819,701 @@ function AT27_PM_open(){
         map.on('layeradd',    deb(()=>{ if (window.AT27_SI_STATE.autorun) AT27_SI_run(); }));
         map.on('layerremove', deb(()=>{ if (window.AT27_SI_STATE.autorun) AT27_SI_run(); }));
         map.__siBound = true;
+      }
+    }
+
+
+</script>
+
+<script>
+    // =======================================================
+    // GENIALIDAD #7 · MAPA DE BRECHA RELATIVA VS. ABSOLUTA
+    // Muestra, para cada sección, la brecha:
+    //   - ABSOLUTA (votos que faltan para rebasar = faltan)
+    //   - RELATIVA (pp = (vL − vX) / Vproj × 100)
+    // Colores: Rojo = pierde (intensidad según brecha). Gris tenue = gana.
+    // Incluye tabla (clic → zoom) y se recalcula al cambiar universo.
+    // Requiere: AT_CTX.map/layer, loadPuesto/getElectData, AT27_GG_project2027, AT27_GG_shares2024.
+    // =======================================================
+
+    /* ====== Estado y utilidades ====== */
+    window.AT27_BR_STATE  = window.AT27_BR_STATE  || { autorun:false, running:false };
+    window.AT27_BR_LAYER  = window.AT27_BR_LAYER  || null;
+    window.AT27_BR_LAYERS = window.AT27_BR_LAYERS || {};   // sec -> layer
+
+    //const sec4   = s => String(s||'').replace(/\D+/g,'').padStart(4,'0');
+    //const fmtInt = x => Number.isFinite(x) ? Math.round(x).toLocaleString() : '—';
+    //const fmtpp  = x => (x===null||x===undefined) ? '—' : (Number.isFinite(+x) ? ((x>0?'+':'')+(+x).toFixed(1)+' pp') : '—');
+
+    const BR_COLORS = { LOSE:'#ef4444', WIN:'#9ca3af', NA:'#cbd5e1' };
+
+    function BR_getUniverseSecIds(){
+      const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
+      return feats.map(f=> sec4(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id));
+    }
+    async function BR_load(p){ return (window.loadPuesto? loadPuesto(p) : getElectData(p)); }
+
+    /* ====== Base 2027 por sección ====== */
+    function BR_baseBySec(js, secIds, puesto, partido){
+      const X = partido.toUpperCase();
+      const out = {}; // sec -> { Vproj, vX, vL, L, faltan, gapPP }
+
+      for (const sec of secIds){
+        const slot = js?.secciones?.[sec4(sec)];
+        const row24 = slot?.['2024']; if (!row24) continue;
+
+        const p27  = (typeof AT27_GG_project2027==='function') ? AT27_GG_project2027(slot, puesto) : null;
+        const ln24 = Number(row24.LN||0);
+        if (p27==null || !ln24) continue;
+
+        const Vproj = ln24 * (p27/100);
+        if (!Number.isFinite(Vproj) || Vproj<1) continue;
+
+        // shares 2024 → votos base 2027
+        const { shares, total:tot24 } = (typeof AT27_GG_shares2024==='function')
+          ? AT27_GG_shares2024(row24)
+          : (function(){
+              let vv = (row24.VOTOS!=null)? Number(row24.VOTOS||0) : 0;
+              if (row24.VOTOS==null){ for (const [k,v] of Object.entries(row24)){ if (k==='LN'||k==='VOTOS') continue; vv += Number(v||0); } }
+              const sh = {};
+              for (const [k,v] of Object.entries(row24)){ if (k==='LN'||k==='VOTOS') continue; sh[k.toUpperCase()] = vv? (Number(v||0)/vv) : 0; }
+              return { shares:sh, total:vv };
+            })();
+        if (!Object.keys(shares).length || !tot24) continue;
+
+        let L=null, vL=-1, vX=0;
+        for (const [sig,sh] of Object.entries(shares)){
+          const vv = sh * Vproj;
+          if (sig.toUpperCase()===X) vX = vv;
+          if (vv>vL){ vL=vv; L=sig.toUpperCase(); }
+        }
+
+        const faltan = Math.max(0, (vL - vX) + 1);
+        const gapPP  = (vL - vX) / Vproj * 100;
+
+        out[sec4(sec)] = { Vproj, vX, vL, L, faltan, gapPP };
+      }
+      return out;
+    }
+
+    /* ====== Overlay ====== */
+    function BR_clear(){
+      const map = window.AT_CTX?.map || window.map;
+      if (!map) return;
+      if (window.AT27_BR_LAYER){ try{ map.removeLayer(AT27_BR_LAYER); }catch(_){};
+        window.AT27_BR_LAYER=null; }
+      window.AT27_BR_LAYERS = {};
+    }
+
+    function BR_buildOverlay(base, modo, cap){
+      const map  = window.AT_CTX?.map || window.map;
+      const baseGeo = window.AT_CTX?.layer?.toGeoJSON?.() || window.AT_DATA;
+      if (!map || !baseGeo?.features) return;
+
+      BR_clear();
+
+      if (map.createPane && !map.getPane('at27_br_pane')){
+        map.createPane('at27_br_pane');
+        const p = map.getPane('at27_br_pane'); p.style.zIndex=740; p.style.pointerEvents='auto';
+      }
+
+      const feats = baseGeo.features.filter(f=>{
+        const id = sec4(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+        return base[id]!=null;
+      });
+
+      const layer = L.geoJSON({type:'FeatureCollection', features:feats}, {
+        pane:'at27_br_pane',
+        style: f=>{
+          const id = sec4(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+          const b  = base[id];
+          if (!b) return { color:BR_COLORS.NA, fillColor:BR_COLORS.NA, weight:1, opacity:.8, fillOpacity:.2 };
+
+          const losing = (b.faltan>0);
+          const metric = (modo==='pp') ? Math.max(0, b.gapPP) : Math.max(0, b.faltan);
+          const mag    = Math.min(1, metric / Math.max(1, cap)); // 0..1
+          const col    = losing ? BR_COLORS.LOSE : BR_COLORS.WIN;
+          const fo     = losing ? (0.22 + mag*0.55) : 0.15;
+          return { color:col, fillColor:col, weight:1, opacity:.9, fillOpacity:fo };
+        },
+        onEachFeature: (feature, lyr)=>{
+          const id = sec4(feature.properties?.ID ?? feature.properties?.SECCION ?? feature.properties?.id);
+          window.AT27_BR_LAYERS[id] = lyr;
+          const b = base[id];
+
+          const tip = `
+            <div style="font-size:12px;">
+              Sección <b>${id}</b><br>
+              ${b.faltan>0? 'Estado: <b>PIERDE</b>' : 'Estado: <b>GANA</b>'}<br>
+              Brecha (votos): <b>${fmtInt(b.faltan)}</b><br>
+              Brecha (pp): <b>${fmtpp(b.gapPP)}</b>
+            </div>`;
+          lyr.bindTooltip(tip, {sticky:true, opacity:.95, direction:'top', className:'at27-tt'});
+          lyr.on('mouseover', ()=>lyr.setStyle({weight:2}));
+          lyr.on('mouseout',  ()=>lyr.setStyle({weight:1}));
+        }
+      });
+
+      layer.addTo(map);
+      window.AT27_BR_LAYER = layer;
+    }
+
+    /* ====== Tabla + resumen ====== */
+    function BR_renderTable(base, modo){
+      const tb = document.getElementById('AT27_BR_tbody');
+      const rows = Object.entries(base).map(([sec,b])=>{
+        return {
+          sec,
+          estado: b.faltan>0 ? 'PIERDE' : 'GANA',
+          faltan: Math.ceil(Math.max(0,b.faltan)),
+          gapPP:  b.gapPP
+        };
+      });
+
+      // Orden: primero PIERDE por mayor brecha (según modo), luego GANA por menor margen.
+      rows.sort((a,b)=>{
+        const aKey = (a.estado==='PIERDE')? 0 : 1;
+        const bKey = (b.estado==='PIERDE')? 0 : 1;
+        if (aKey!==bKey) return aKey-bKey;
+        if (a.estado==='PIERDE'){
+          return (modo==='pp' ? (b.gapPP - a.gapPP) : (b.faltan - a.faltan)) || (Number(a.sec)-Number(b.sec));
+        }else{
+          // ganadas: margen menor primero → gapPP asc
+          return (a.gapPP - b.gapPP) || (Number(a.sec)-Number(b.sec));
+        }
+      });
+
+      tb.innerHTML = rows.map(r=>{
+        const bg = r.estado==='PIERDE' ? '#fee2e2' : '#f1f5f9';
+        const metr = (modo==='pp') ? fmtpp(r.gapPP) : fmtInt(r.faltan);
+        return `
+          <tr data-sec="${r.sec}" style="cursor:pointer; background:${bg};">
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${r.sec}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${r.estado}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${metr}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${fmtInt(r.faltan)}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${fmtpp(r.gapPP)}</td>
+          </tr>`;
+      }).join('');
+
+      tb.onclick = (e)=>{
+        const tr = e.target.closest('tr[data-sec]'); if (!tr) return;
+        BR_focus(tr.getAttribute('data-sec'));
+      };
+    }
+
+    function BR_renderSummary(base, modo){
+      const el = document.getElementById('AT27_BR_summary');
+      let pierde=0, gana=0, maxF=0, maxPP=0;
+      Object.values(base).forEach(b=>{
+        if (b.faltan>0){ pierde++; if (b.faltan>maxF) maxF=b.faltan; if (b.gapPP>maxPP) maxPP=b.gapPP; }
+        else { gana++; }
+      });
+      el.innerHTML = `
+        <div style="font-size:12px; line-height:1.35;">
+          Secciones: <b>${pierde+gana}</b> · Pierde: <b>${pierde}</b> · Gana: <b>${gana}</b><br>
+          Máxima brecha: <b>${fmtInt(maxF)}</b> votos · <b>${fmtpp(maxPP)}</b>
+        </div>`;
+    }
+
+    function BR_focus(sec){
+      const id = sec4(sec);
+      const map = window.AT_CTX?.map || window.map;
+      const lyr = window.AT27_BR_LAYERS[id];
+      if (!map) return;
+      if (lyr){
+        try{ map.fitBounds(lyr.getBounds(), {maxZoom:16, padding:[20,20]}); }catch(_){}
+        if (lyr.openTooltip) lyr.openTooltip();
+        const ofo = lyr.options.fillOpacity ?? .3;
+        lyr.setStyle({weight:3, fillOpacity: Math.min(.95, ofo+.25)});
+        setTimeout(()=> lyr.setStyle({weight:1, fillOpacity:ofo}), 900);
+      }
+    }
+
+    /* ====== RUN ====== */
+    async function AT27_BR_run(){
+      if (window.AT27_BR_STATE.running) return;
+      window.AT27_BR_STATE.running = true;
+      try{
+        const puesto  = document.getElementById('AT27_BR_selPuesto').value;
+        const partido = document.getElementById('AT27_BR_selPartido').value.toUpperCase();
+        const modo    = document.querySelector('input[name="AT27_BR_modo"]:checked').value; // votos | pp
+        const cap     = Number(document.getElementById('AT27_BR_cap').value || (modo==='pp'? 10 : 1000));
+
+        const secIds = BR_getUniverseSecIds();
+        if (!secIds.length){ BR_clear(); document.getElementById('AT27_BR_tbody').innerHTML=''; return; }
+
+        const js   = await BR_load(puesto);
+        const base = BR_baseBySec(js, secIds, puesto, partido);
+
+        BR_buildOverlay(base, modo, cap);
+        BR_renderSummary(base, modo);
+        BR_renderTable(base, modo);
+
+      }catch(e){
+        console.error('AT27_BR_run', e);
+        alert('No pude ejecutar “Brecha pp/votos”.');
+      }finally{
+        window.AT27_BR_STATE.running = false;
+      }
+    }
+
+    /* ====== Panel UI ====== */
+    function AT27_BR_open(){
+      let panel = document.getElementById('AT27_BR_panel');
+      if (panel){ panel.style.display='block'; return; }
+
+      panel = document.createElement('div');
+      panel.id = 'AT27_BR_panel';
+      Object.assign(panel.style,{
+        position:'fixed', right:'24px', top:'24px', zIndex:9998,
+        width:'560px', maxWidth:'calc(100vw - 40px)', maxHeight:'calc(100vh - 40px)',
+        background:'#fff', border:'1px solid #e5e7eb', borderRadius:'14px',
+        boxShadow:'0 18px 40px rgba(0,0,0,.18)', display:'flex', flexDirection:'column',
+        overflow:'hidden', resize:'both', minWidth:'380px', minHeight:'280px'
+      });
+
+      panel.innerHTML = `
+        <div id="AT27_BR_hdr" style="cursor:move; user-select:none; background:#f8fafc; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
+          <div style="font-weight:800;">Mapa de brecha (pp / votos)</div>
+          <button id="AT27_BR_center" style="margin-left:auto; background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:4px 8px; cursor:pointer;">Recentrar</button>
+          <button id="AT27_BR_close" title="Cerrar" style="background:transparent;border:none;font-size:18px;cursor:pointer;">×</button>
+        </div>
+
+        <div style="padding:10px 12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end;">
+          <label style="font-size:12px;">Puesto<br>
+            <select id="AT27_BR_selPuesto" class="ttb-select" style="width:100%;">
+              <option value="A">Ayuntamiento</option>
+              <option value="DL">Diputado Local</option>
+              <option value="DF">Diputado Federal</option>
+            </select>
+          </label>
+          <label style="font-size:12px;">Partido<br>
+            <select id="AT27_BR_selPartido" class="ttb-select" style="width:100%;">
+              <option>PAN</option><option>PRI</option><option>PVEM</option><option>MORENA</option>
+            </select>
+          </label>
+
+          <div style="grid-column:1 / span 2; display:flex; gap:16px; align-items:center; font-size:12px;">
+            Modo:
+            <label><input type="radio" name="AT27_BR_modo" value="votos" checked> votos</label>
+            <label><input type="radio" name="AT27_BR_modo" value="pp"> pp</label>
+            <span style="opacity:.7;">· Cap color</span>
+            <input id="AT27_BR_cap" type="number" value="1000" style="width:90px; padding:4px 6px; border:1px solid #e5e7eb; border-radius:8px;">
+          </div>
+
+          <button id="AT27_BR_run" class="ttb-btn ttb-primary" style="grid-column:1 / span 2;">Ejecutar</button>
+        </div>
+
+        <div style="padding:8px 12px;">
+          <div id="AT27_BR_legend" style="font-size:12px; display:flex; gap:12px; align-items:center; margin-bottom:6px;">
+            <span><span style="display:inline-block;width:10px;height:10px;background:${BR_COLORS.LOSE};border-radius:2px;"></span> Pierde (intensidad = brecha)</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:${BR_COLORS.WIN};border-radius:2px;"></span> Gana</span>
+          </div>
+          <div id="AT27_BR_summary" style="font-size:12px; color:#334155;"></div>
+        </div>
+
+        <div style="flex:1; overflow:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead>
+              <tr style="position:sticky; top:0; background:#f8fafc;">
+                <th style="text-align:left;  padding:6px 8px; border-bottom:1px solid #e2e8f0;">Sección</th>
+                <th style="text-align:left;  padding:6px 8px; border-bottom:1px solid #e2e8f0;">Estado</th>
+                <th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e2e8f0;">Brecha (según modo)</th>
+                <th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e2e8f0;">Faltan (votos)</th>
+                <th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e2e8f0;">Brecha (pp)</th>
+              </tr>
+            </thead>
+            <tbody id="AT27_BR_tbody"></tbody>
+          </table>
+        </div>
+      `;
+      document.body.appendChild(panel);
+
+      // Wire UI
+      const $$ = (sel)=> panel.querySelector(sel);
+      $$('#AT27_BR_close').onclick  = ()=> panel.style.display='none';
+      $$('#AT27_BR_center').onclick = ()=> (window.AT27_fitUniverseBounds? AT27_fitUniverseBounds() : null);
+      $$('#AT27_BR_run').onclick    = ()=>{ window.AT27_BR_STATE.autorun = true; AT27_BR_run(); };
+
+      // Cambiar cap por modo (sugerencias)
+      panel.querySelectorAll('input[name="AT27_BR_modo"]').forEach(r=>{
+        r.addEventListener('change', ()=>{
+          const modo = panel.querySelector('input[name="AT27_BR_modo"]:checked').value;
+          if (modo==='pp' && Number($$('#AT27_BR_cap').value)>50) $$('#AT27_BR_cap').value = 10;
+          if (modo==='votos' && Number($$('#AT27_BR_cap').value)<50) $$('#AT27_BR_cap').value = 1000;
+        });
+      });
+
+      // Drag + bloqueo eventos al mapa
+      (function drag(panelEl, handleEl){
+        let sx=0, sy=0, ox=0, oy=0, dragging=false;
+        handleEl.addEventListener('mousedown', e=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panelEl.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
+        window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panelEl.style.left=(ox+dx)+'px'; panelEl.style.top=(oy+dy)+'px'; panelEl.style.right='auto'; });
+        window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; });
+      })(panel, panel.querySelector('#AT27_BR_hdr'));
+      if (window.L && L.DomEvent){ L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel); }
+
+      // Recalcular si cambias universo (tras primer run)
+      const map = window.AT_CTX?.map || window.map;
+      if (map && !map.__brBound){
+        const deb = (fn,ms=350)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+        map.on('layeradd',    deb(()=>{ if (window.AT27_BR_STATE.autorun) AT27_BR_run(); }));
+        map.on('layerremove', deb(()=>{ if (window.AT27_BR_STATE.autorun) AT27_BR_run(); }));
+        map.__brBound = true;
+      }
+    }
+
+
+</script>
+
+
+<script>
+    // =======================================================
+    // GENIALIDAD #8 · SENSIBILIDAD A PARTICIPACIÓN
+    // ¿Qué cambia si la participación 2027* sube/baja ±δ pp?
+    // Verde: la sección voltea a tu favor | Rojo: voltea en contra | Gris: sin cambio.
+    // Requiere: AT_CTX.map/layer, loadPuesto/getElectData, AT27_GG_project2027, AT27_GG_shares2024.
+    // (Opcional) AT27_GG_getUniverseSecIds para obtener universo actual.
+    // =======================================================
+
+    /* ====== Estado y utilidades ====== */
+    window.AT27_SP_STATE  = window.AT27_SP_STATE  || { autorun:false, running:false };
+    window.AT27_SP_LAYER  = window.AT27_SP_LAYER  || null;
+    window.AT27_SP_LAYERS = window.AT27_SP_LAYERS || {};   // sec -> layer
+
+    //const sec4   = s => String(s||'').replace(/\D+/g,'').padStart(4,'0');
+    //const clamp  = (x,a,b)=> Math.min(b, Math.max(a, x));
+    //const fmtInt = x => Number.isFinite(x) ? Math.round(x).toLocaleString() : '—';
+    //const fmtpp  = x => (x===null||x===undefined) ? '—' : (Number.isFinite(+x) ? ((x>0?'+':'')+(+x).toFixed(1)+' pp') : '—');
+
+    const SP_COL = { FAVOR:'#22c55e', CONTRA:'#ef4444', NC:'#cbd5e1' };
+
+    function SP_getUniverseSecIds(){
+      if (typeof AT27_GG_getUniverseSecIds==='function') return AT27_GG_getUniverseSecIds();
+      const feats = (window.AT_CTX?.layer?.toGeoJSON?.().features) || (window.AT_DATA?.features) || [];
+      return feats.map(f=> sec4(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id));
+    }
+    async function SP_load(p){ return (window.loadPuesto? loadPuesto(p) : getElectData(p)); }
+
+    /* ====== Helpers shares 2024 ====== */
+    function SHARES_2024(row24){
+      if (typeof AT27_GG_shares2024==='function') return AT27_GG_shares2024(row24);
+      // fallback simple
+      let vv = (row24?.VOTOS!=null)? Number(row24.VOTOS||0) : 0;
+      if (row24 && row24.VOTOS==null){ for (const [k,v] of Object.entries(row24)){ if (k==='LN'||k==='VOTOS') continue; vv += Number(v||0); } }
+      const sh = {};
+      if (row24){
+        for (const [k,v] of Object.entries(row24)){ if (k==='LN'||k==='VOTOS') continue; sh[k.toUpperCase()] = vv? (Number(v||0)/vv) : 0; }
+      }
+      return { shares: sh, total: vv };
+    }
+
+    /* ====== Base y escenario con delta ====== */
+    function SP_compute(js, secIds, puesto, partido, deltaPP){
+      const X = partido.toUpperCase();
+      const bySec = {}; // sec -> { L0, vL0, vX0, gap0, p27, p27d, Ld, vLd, vXd, gapd, flip:'FAVOR'|'CONTRA'|'NC' }
+
+      for (const s of secIds){
+        const slot = js?.secciones?.[sec4(s)];
+        const row24 = slot?.['2024']; if (!row24) continue;
+
+        const ln24 = Number(row24.LN||0);
+        const p27  = (typeof AT27_GG_project2027==='function') ? AT27_GG_project2027(slot, puesto) : null;
+        if (!ln24 || p27==null) continue;
+
+        const { shares, total:vv24 } = SHARES_2024(row24);
+        if (!Object.keys(shares).length || !vv24) continue;
+
+        // base
+        const V0 = ln24 * (p27/100);
+        if (!Number.isFinite(V0) || V0<1) continue;
+
+        let L0=null, vL0=-1, vX0=0;
+        for (const [sig,sh] of Object.entries(shares)){
+          const v = sh*V0;
+          if (sig.toUpperCase()===X) vX0 = v;
+          if (v>vL0){ vL0=v; L0=sig.toUpperCase(); }
+        }
+        const gap0 = (vL0 - vX0) / V0 * 100; // pp (>=0 si L0 ≠ X)
+
+        // escenario con delta (aditivo en puntos a p27)
+        const p27d = clamp(p27 + deltaPP, 5, 90);
+        const Vd   = ln24 * (p27d/100);
+
+        let Ld=null, vLd=-1, vXd=0;
+        for (const [sig,sh] of Object.entries(shares)){
+          const v = sh*Vd;
+          if (sig.toUpperCase()===X) vXd = v;
+          if (v>vLd){ vLd=v; Ld=sig.toUpperCase(); }
+        }
+        const gapd = (vLd - vXd) / Vd * 100;
+
+        let flip='NC';
+        if (L0!==Ld){
+          // cambió de ganador
+          flip = (Ld===X) ? 'FAVOR' : (L0===X ? 'CONTRA' : (Ld===X ? 'FAVOR' : 'CONTRA'));
+        }
+
+        bySec[sec4(s)] = { L0, vL0, vX0, gap0, p27, p27d, Ld, vLd, vXd, gapd, flip };
+      }
+      return bySec;
+    }
+
+    /* ====== Overlay ====== */
+    function SP_clear(){
+      const map = window.AT_CTX?.map || window.map;
+      if (!map) return;
+      if (window.AT27_SP_LAYER){ try{ map.removeLayer(AT27_SP_LAYER); }catch(_){};
+        window.AT27_SP_LAYER=null; }
+      window.AT27_SP_LAYERS = {};
+    }
+
+    function SP_buildOverlay(perSec, filtro){
+      const map  = window.AT_CTX?.map || window.map;
+      const base = window.AT_CTX?.layer?.toGeoJSON?.() || window.AT_DATA;
+      if (!map || !base?.features) return;
+
+      SP_clear();
+
+      if (map.createPane && !map.getPane('at27_sp_pane')){
+        map.createPane('at27_sp_pane');
+        const p = map.getPane('at27_sp_pane'); p.style.zIndex=750; p.style.pointerEvents='auto';
+      }
+
+      const feats = base.features.filter(f=>{
+        const id = sec4(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+        const x = perSec[id]; if (!x) return false;
+        return (filtro==='TODOS') ? true : (x.flip===filtro);
+      });
+
+      const layer = L.geoJSON({type:'FeatureCollection', features:feats}, {
+        pane:'at27_sp_pane',
+        style: f=>{
+          const id = sec4(f.properties?.ID ?? f.properties?.SECCION ?? f.properties?.id);
+          const x  = perSec[id];
+          const col = x.flip==='FAVOR' ? SP_COL.FAVOR : (x.flip==='CONTRA' ? SP_COL.CONTRA : SP_COL.NC);
+          const fo  = (x.flip==='NC') ? .18 : .45;
+          return { color:col, fillColor:col, weight:1, opacity:.9, fillOpacity:fo };
+        },
+        onEachFeature: (feature, lyr)=>{
+          const id = sec4(feature.properties?.ID ?? feature.properties?.SECCION ?? feature.properties?.id);
+          window.AT27_SP_LAYERS[id] = lyr;
+          const x = perSec[id];
+          const tip = `
+            <div style="font-size:12px;">
+              Sección <b>${id}</b><br>
+              Base: <b>${x.L0}</b> (margen ${fmtpp(x.gap0)}) · p2027*: <b>${x.p27?.toFixed(1)||'—'}%</b><br>
+              Con Δp: <b>${x.Ld}</b> (margen ${fmtpp(x.gapd)}) · p' = <b>${x.p27d?.toFixed(1)||'—'}%</b><br>
+              Cambio: <b>${x.flip}</b>
+            </div>`;
+          lyr.bindTooltip(tip, {sticky:true, opacity:.95, direction:'top', className:'at27-tt'});
+          lyr.on('mouseover', ()=>lyr.setStyle({weight:2}));
+          lyr.on('mouseout',  ()=>lyr.setStyle({weight:1}));
+        }
+      });
+
+      layer.addTo(map);
+      window.AT27_SP_LAYER = layer;
+    }
+
+    /* ====== Tabla + resumen ====== */
+    function SP_renderTable(perSec, filtro){
+      const tb = document.getElementById('AT27_SP_tbody');
+      let rows = Object.entries(perSec).map(([sec,x])=>({
+        sec, L0:x.L0, Ld:x.Ld, gap0:x.gap0, gapd:x.gapd, flip:x.flip
+      }));
+      if (filtro!=='TODOS') rows = rows.filter(r=> r.flip===filtro);
+
+      // orden: FAVOR primero (por |gapd| más justo), luego CONTRA, luego NC
+      const keyRank = t => t==='FAVOR'?0 : (t==='CONTRA'?1:2);
+      rows.sort((a,b)=> (keyRank(a.flip)-keyRank(b.flip))
+                        || (Math.abs(a.gapd)-Math.abs(b.gapd))
+                        || (Number(a.sec)-Number(b.sec)));
+
+      tb.innerHTML = rows.map(r=>{
+        const bg = r.flip==='FAVOR' ? '#dcfce7' : (r.flip==='CONTRA' ? '#fee2e2' : '');
+        return `
+          <tr data-sec="${r.sec}" style="cursor:pointer; background:${bg};">
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${r.sec}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${r.L0}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${r.Ld}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${fmtpp(r.gap0)}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${fmtpp(r.gapd)}</td>
+            <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${r.flip}</td>
+          </tr>`;
+      }).join('');
+
+      tb.onclick = (e)=>{
+        const tr = e.target.closest('tr[data-sec]'); if (!tr) return;
+        SP_focus(tr.getAttribute('data-sec'));
+      };
+    }
+
+    function SP_renderSummary(perSec){
+      const el = document.getElementById('AT27_SP_summary');
+      let fav=0, contra=0, nc=0;
+      Object.values(perSec).forEach(x=>{
+        if (x.flip==='FAVOR') fav++;
+        else if (x.flip==='CONTRA') contra++;
+        else nc++;
+      });
+      el.innerHTML = `
+        <div style="font-size:12px; line-height:1.35;">
+          Cambios con Δp: <b>${fav+contra}</b> · A favor: <b style="color:${SP_COL.FAVOR}">${fav}</b>
+          · En contra: <b style="color:${SP_COL.CONTRA}">${contra}</b> · Sin cambio: <b>${nc}</b>
+        </div>`;
+    }
+
+    function SP_focus(sec){
+      const id = sec4(sec);
+      const map = window.AT_CTX?.map || window.map;
+      const lyr = window.AT27_SP_LAYERS[id];
+      if (!map) return;
+      if (lyr){
+        try{ map.fitBounds(lyr.getBounds(), {maxZoom:16, padding:[20,20]}); }catch(_){}
+        if (lyr.openTooltip) lyr.openTooltip();
+        const ofo = lyr.options.fillOpacity ?? .3;
+        lyr.setStyle({weight:3, fillOpacity: Math.min(.95, ofo+.25)});
+        setTimeout(()=> lyr.setStyle({weight:1, fillOpacity:ofo}), 900);
+      }
+    }
+
+    /* ====== RUN ====== */
+    async function AT27_SP_run(){
+      if (window.AT27_SP_STATE.running) return;
+      window.AT27_SP_STATE.running = true;
+      try{
+        const puesto  = document.getElementById('AT27_SP_selPuesto').value;
+        const partido = document.getElementById('AT27_SP_selPartido').value.toUpperCase();
+        const delta   = Number(document.getElementById('AT27_SP_delta').value || 0); // ±pp
+        const filtro  = document.getElementById('AT27_SP_filtro').value; // TODOS|FAVOR|CONTRA
+
+        const secIds = SP_getUniverseSecIds();
+        if (!secIds.length){ SP_clear(); document.getElementById('AT27_SP_tbody').innerHTML=''; return; }
+
+        const js   = await SP_load(puesto);
+        const per  = SP_compute(js, secIds, puesto, partido, delta);
+
+        SP_buildOverlay(per, filtro);
+        SP_renderSummary(per);
+        SP_renderTable(per, filtro);
+
+      }catch(e){
+        console.error('AT27_SP_run', e);
+        alert('No pude ejecutar “Sensibilidad a participación”.');
+      }finally{
+        window.AT27_SP_STATE.running = false;
+      }
+    }
+
+    /* ====== Panel UI ====== */
+    function AT27_SP_open(){
+      let panel = document.getElementById('AT27_SP_panel');
+      if (panel){ panel.style.display='block'; return; }
+
+      panel = document.createElement('div');
+      panel.id = 'AT27_SP_panel';
+      Object.assign(panel.style,{
+        position:'fixed', right:'24px', top:'24px', zIndex:9998,
+        width:'560px', maxWidth:'calc(100vw - 40px)', maxHeight:'calc(100vh - 40px)',
+        background:'#fff', border:'1px solid #e5e7eb', borderRadius:'14px',
+        boxShadow:'0 18px 40px rgba(0,0,0,.18)', display:'flex', flexDirection:'column',
+        overflow:'hidden', resize:'both', minWidth:'380px', minHeight:'280px'
+      });
+
+      panel.innerHTML = `
+        <div id="AT27_SP_hdr" style="cursor:move; user-select:none; background:#fff7ed; color:#111; padding:10px 12px; display:flex; gap:10px; align-items:center;">
+          <div style="font-weight:800;">Sensibilidad a participación (±pp)</div>
+          <button id="AT27_SP_center" style="margin-left:auto; background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:4px 8px; cursor:pointer;">Recentrar</button>
+          <button id="AT27_SP_close" title="Cerrar" style="background:transparent;border:none;font-size:18px;cursor:pointer;">×</button>
+        </div>
+
+        <div style="padding:10px 12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end;">
+          <label style="font-size:12px;">Puesto<br>
+            <select id="AT27_SP_selPuesto" class="ttb-select" style="width:100%;">
+              <option value="A">Ayuntamiento</option>
+              <option value="DL">Diputado Local</option>
+              <option value="DF">Diputado Federal</option>
+            </select>
+          </label>
+          <label style="font-size:12px;">Partido<br>
+            <select id="AT27_SP_selPartido" class="ttb-select" style="width:100%;">
+              <option>PAN</option><option>PRI</option><option>PVEM</option><option>MORENA</option>
+            </select>
+          </label>
+
+          <div style="grid-column:1 / span 2; display:flex; gap:14px; align-items:center; font-size:12px;">
+            Δ participación (pp) 
+            <input id="AT27_SP_delta" type="range" min="-8" max="8" step="0.5" value="2" style="flex:1;">
+            <span id="AT27_SP_lblDelta" style="width:60px; text-align:right;">+2.0 pp</span>
+            <span style="opacity:.7;">Filtrar:</span>
+            <select id="AT27_SP_filtro" class="ttb-select">
+              <option value="TODOS">Todos</option>
+              <option value="FAVOR">Solo a favor</option>
+              <option value="CONTRA">Solo en contra</option>
+            </select>
+            <button id="AT27_SP_run" class="ttb-btn ttb-primary" style="margin-left:auto;">Ejecutar</button>
+          </div>
+        </div>
+
+        <div style="padding:8px 12px;">
+          <div id="AT27_SP_legend" style="font-size:12px; display:flex; gap:12px; align-items:center; margin-bottom:6px;">
+            <span><span style="display:inline-block;width:10px;height:10px;background:${SP_COL.FAVOR};border-radius:2px;"></span> Voltea a tu favor</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:${SP_COL.CONTRA};border-radius:2px;"></span> Voltea en contra</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:${SP_COL.NC};border-radius:2px;"></span> Sin cambio</span>
+          </div>
+          <div id="AT27_SP_summary" style="font-size:12px; color:#334155;"></div>
+        </div>
+
+        <div style="flex:1; overflow:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead>
+              <tr style="position:sticky; top:0; background:#f8fafc;">
+                <th style="text-align:left;  padding:6px 8px; border-bottom:1px solid #e2e8f0;">Sección</th>
+                <th style="text-align:left;  padding:6px 8px; border-bottom:1px solid #e2e8f0;">Ganador base</th>
+                <th style="text-align:left;  padding:6px 8px; border-bottom:1px solid #e2e8f0;">Ganador con Δp</th>
+                <th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e2e8f0;">Margen base</th>
+                <th style="text-align:right; padding:6px 8px; border-bottom:1px solid #e2e8f0;">Margen Δp</th>
+                <th style="text-align:left;  padding:6px 8px; border-bottom:1px solid #e2e8f0;">Cambio</th>
+              </tr>
+            </thead>
+            <tbody id="AT27_SP_tbody"></tbody>
+          </table>
+        </div>
+      `;
+      document.body.appendChild(panel);
+
+      // Wiring UI
+      const $$ = (sel)=> panel.querySelector(sel);
+      $$('#AT27_SP_close').onclick  = ()=> panel.style.display='none';
+      $$('#AT27_SP_center').onclick = ()=> (window.AT27_fitUniverseBounds? AT27_fitUniverseBounds() : null);
+      $$('#AT27_SP_run').onclick    = ()=>{ window.AT27_SP_STATE.autorun = true; AT27_SP_run(); };
+
+      // Sync etiqueta del slider
+      const syncΔ = ()=>{
+        const v = Number($$('#AT27_SP_delta').value||0);
+        $$('#AT27_SP_lblDelta').textContent = (v>=0? '+' : '') + v.toFixed(1) + ' pp';
+      };
+      $$('#AT27_SP_delta').addEventListener('input', syncΔ);
+      syncΔ();
+
+      // Drag + bloqueo eventos al mapa
+      (function drag(panelEl, handleEl){
+        let sx=0, sy=0, ox=0, oy=0, dragging=false;
+        handleEl.addEventListener('mousedown', e=>{ dragging=true; sx=e.clientX; sy=e.clientY; const r=panelEl.getBoundingClientRect(); ox=r.left; oy=r.top; document.body.style.userSelect='none'; });
+        window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-sx, dy=e.clientY-sy; panelEl.style.left=(ox+dx)+'px'; panelEl.style.top=(oy+dy)+'px'; panelEl.style.right='auto'; });
+        window.addEventListener('mouseup', ()=>{ dragging=false; document.body.style.userSelect=''; });
+      })(panel, panel.querySelector('#AT27_SP_hdr'));
+      if (window.L && L.DomEvent){ L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel); }
+
+      // Recalcular si cambias universo (tras primer run)
+      const map = window.AT_CTX?.map || window.map;
+      if (map && !map.__spBound){
+        const deb = (fn,ms=350)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+        map.on('layeradd',    deb(()=>{ if (window.AT27_SP_STATE.autorun) AT27_SP_run(); }));
+        map.on('layerremove', deb(()=>{ if (window.AT27_SP_STATE.autorun) AT27_SP_run(); }));
+        map.__spBound = true;
       }
     }
 
