@@ -1,0 +1,482 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Análisis Territorial</title>
+    <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+      <link rel="stylesheet" href="analisis_territorial.css"/>
+  </head>
+  <body>
+    <div id="at-layout">
+    <div id="panel-lateral">
+      <div id="panel-header">
+        <!-- <img src="../assets/img/logo.png" alt="Logo"/> -->
+        <span>Análisis Territorial</span>
+      </div>
+      <!-- Aquí va el contenido del panel lateral -->
+
+      <!-- Buscador de secciones -->
+      <div
+        id="sec-search"
+        style="
+          padding: 10px 12px;
+          border-top: 1px solid #cbd5e1;
+          background: #eef2f7;
+        "
+      >
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input
+            id="sec-q"
+            type="text"
+            placeholder="Buscar sección (ej. 1234 o '1234 León')"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="search"
+            style="
+              flex: 1;
+              padding: 6px 8px;
+              border: 1px solid #94a3b8;
+              border-radius: 6px;
+            "
+          />
+
+        </div>
+        <ul
+          id="sec-suggest"
+          style="
+            margin: 8px 0 0 0;
+            padding: 0;
+            list-style: none;
+            max-height: 180px;
+            overflow: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            display: none;
+          "
+        ></ul>
+      </div>
+
+      <div
+        id="mini-universe"
+        style="
+          padding: 12px 12px 6px 12px;
+          background: #eef2f7;
+          border-top: 1px solid #cbd5e1;
+        "
+      >
+        <div class="row" style="margin-bottom: 8px">
+          <label
+            ><input type="checkbox" id="mini-all-state" /> Estado
+            completo</label
+          >
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Municipio</label>
+          <select id="mini-sel-mun" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Federal</label>
+          <select id="mini-sel-df" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Local</label>
+          <select id="mini-sel-dl" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="hint" style="font-size: 12px; color: #64748b">
+          Elige solo uno. Al cambiar, el mapa se actualiza.
+        </div>
+      </div>
+
+      <!-- Barra superior (ahora vertical) -->
+      <div id="top-toolbar" class="ttb" style="padding: 10px 12px 12px">
+        <div class="ttb-wrap">
+          <!-- Toggle Compact -->
+          <button
+            id="btn-ttb-compact-toggle"
+            class="ttb-btn"
+            title="Compactar barra"
+            type="button"
+          >
+            <span class="ico">▤</span><span class="txt">▤</span>
+          </button>
+
+          <!-- SECCIÓN (requieren sección seleccionada) -->
+          <span class="ttb-label">Sección</span>
+          <button id="btn-historial" class="ttb-btn" title="Historial (H)">
+            Historial
+          </button>
+          <button
+            id="btn-comp-puesto"
+            class="ttb-btn"
+            title="Comparativa por Puesto (C)"
+            type="button"
+            disabled
+          >
+            Comparativa
+          </button>
+          <button
+            id="btn-competitividad"
+            class="ttb-btn"
+            title="Competitividad 2024 (K)"
+            type="button"
+            disabled
+          >
+            Competitividad
+          </button>
+          <button
+            id="btn-top3"
+            class="ttb-btn"
+            title="Top 3 Partidos 2024 (T)"
+            type="button"
+            disabled
+          >
+            Top 3
+          </button>
+
+          <div class="ttb-sep"></div>
+
+          <!-- UNIVERSO (estado/mun/DF/DL; siempre habilitados) -->
+          <span class="ttb-label">Universo</span>
+
+          <button
+            id="btn-gpa"
+            class="ttb-btn"
+            title="Ganadores por Año (Y)"
+            type="button"
+          >
+            Ganadores por Año
+          </button>
+          <button
+            id="btn-abst"
+            class="ttb-btn"
+            title="Abstención (B)"
+            type="button"
+          >
+            Abstención
+          </button>
+          <button id="btn-hhi" class="ttb-btn" title="HHI 2024 (I)" type="button">
+            Indice de concentracion 2024
+          </button>
+
+          <div class="ttb-sep"></div>
+
+          <button
+            id="btn-recentrar"
+            class="ttb-btn"
+            title="Recentrar universo (R)"
+            type="button"
+          >
+            Recentrar
+          </button>
+
+          <button
+            id="btn-ayuda"
+            class="ttb-btn ttb-help"
+            title="Ayuda (?)"
+            type="button"
+          >
+            Ayuda
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="map-wrap">
+      <div id="map"></div>
+
+      <!-- Rail de herramientas -->
+      <div id="tool-rail" class="tool-rail">
+        <button class="rail-toggle" id="railToggle" aria-label="Mostrar/ocultar">
+          <svg><use href="#ic-menu"></use></svg>
+        </button>
+
+        <div class="rail-group" id="railGroup">
+          <button class="tool" data-tool="historial" data-tooltip="Historial">
+            <svg><use href="#ic-history"></use></svg>
+          </button>
+          <button class="tool" data-tool="ganador" data-tooltip="Ganador">
+            <svg><use href="#ic-trophy"></use></svg>
+          </button>
+          <button class="tool" data-tool="competencia" data-tooltip="Competencia">
+            <svg><use href="#ic-compare"></use></svg>
+          </button>
+          <button class="tool" data-tool="proyeccion" data-tooltip="Proyección">
+            <svg><use href="#ic-forecast"></use></svg>
+          </button>
+
+          <div class="rail-sep"></div>
+
+          <button class="tool" data-tool="exportar" data-tooltip="Exportar">
+            <svg><use href="#ic-download"></use></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="at-dashboard">
+      <div id="dash-panels">
+        <div id="hist-panel" class="hist-panel" style="display: none">
+      <div class="hdr">
+        <div class="ttl">
+          <strong>Historial</strong> · Sección <span id="hist-sec">—</span>
+        </div>
+        <div class="ctl">
+          <label for="hist-puesto">Puesto</label>
+          <select id="hist-puesto">
+            <option value="P">Presidente</option>
+            <option value="S">Senador</option>
+            <option value="G">Gobernador</option>
+            <option value="DF">Diputado Federal</option>
+            <option value="DL">Diputado Local</option>
+            <option value="A">Ayuntamiento</option>
+          </select>
+          <button id="hist-close" class="btn-close" aria-label="Cerrar">
+            ×
+          </button>
+        </div>
+      </div>
+      <div class="body">
+        <div class="grid">
+          <div class="card">
+            <div class="card-h">Historial por año (votos)</div>
+            <canvas id="hist-bar"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-h">Ganadores 2018–2024 (votos)</div>
+            <canvas id="hist-win"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-h">Competencia 2024 (% del total)</div>
+            <canvas id="hist-pie"></canvas>
+          </div>
+
+          <label class="qa-toggle" title="Modo Verificación">
+            <input type="checkbox" id="hist-qa-toggle" /> QA
+          </label>
+        </div>
+      </div>
+        </div>
+
+        <div id="sec-info">
+          <div class="hdr">
+            <span class="ttl">Sección</span>
+            <button id="sec-close" class="btn-close" aria-label="Cerrar">×</button>
+          </div>
+          <div class="body">
+          <div class="row-inline">
+            <span class="k">Distrito Federal</span>
+            <span class="v" id="si-df">—</span>
+            <span class="k">Distrito Local</span>
+            <span class="v" id="si-dl">—</span>
+            <span class="k">LN (2024)</span>
+            <span class="v" id="si-ln">—</span>
+          </div>
+        </div>
+
+        <div id="hist-qa" class="card" style="display: none">
+          <div class="card-h qa-head">
+            <span>Verificación (QA)</span>
+            <button id="qa-close" class="btn-close" aria-label="Cerrar">×</button>
+          </div>
+          <div
+            id="hist-qa-context"
+            style="font-size: 13px; margin: 0.25rem 0"
+          ></div>
+          <div class="qa-cols">
+            <div id="hist-qa-app" class="card">
+              <div class="card-h">Fuente interna (App/JSON)</div>
+              <table class="qa-table" id="qa-app-table"></table>
+              <div id="qa-app-warn" class="qa-warn"></div>
+              <div
+                style="
+                  margin-top: 0.5rem;
+                  display: flex;
+                  gap: 0.5rem;
+                  align-items: center;
+                  flex-wrap: wrap;
+                "
+              >
+                <label style="display: inline-flex; gap: 0.25rem; align-items: center">
+                  Fuente:
+                  <select id="qa-source">
+                    <option value="IEEG" selected>IEEG</option>
+                    <option value="INE">INE</option>
+                  </select>
+                </label>
+                <button id="qa-compare" type="button">Comparar</button>
+                <button id="qa-clear-ext" type="button">Limpiar</button>
+                <span id="qa-compare-result" style="margin-left: 0.5rem"></span>
+              </div>
+            </div>
+            <div id="hist-qa-external" class="card">
+              <div class="card-h">Externo (INE/IEEG)</div>
+
+              <div
+                class="qa-links"
+                style="
+                  display: flex;
+                  gap: 0.5rem;
+                  align-items: center;
+                  flex-wrap: wrap;
+                  margin: 0.5rem 0;
+                "
+              >
+                <label style="display: flex; gap: 0.25rem; align-items: center">
+                  INE:
+                  <input
+                    id="qa-url-ine"
+                    type="url"
+                    placeholder="https://..."
+                    style="width: 320px"
+                  />
+                  <button id="qa-open-ine" type="button">Abrir</button>
+                </label>
+                <label style="display: flex; gap: 0.25rem; align-items: center">
+                  IEEG:
+                  <input
+                    id="qa-url-ieeg"
+                    type="url"
+                    value="https://computosgto2024.ieeg.mx/#/gubernatura/entidad/votos-entidad/mapa"
+                    placeholder="https://..."
+                    style="width: 320px"
+                  />
+                  <button id="qa-open-ieeg" type="button">Abrir</button>
+                </label>
+                <button id="qa-save-urls" type="button">Guardar URLs</button>
+              </div>
+
+              <table class="qa-table" id="qa-ext-table">
+                <thead>
+                  <tr>
+                    <th>Campo</th>
+                    <th>Valor (pegar de INE/IEEG)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>PAN</td>
+                    <td>
+                      <input class="qa-num" data-f="PAN" inputmode="numeric" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>PRI</td>
+                    <td>
+                      <input class="qa-num" data-f="PRI" inputmode="numeric" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>PVEM</td>
+                    <td>
+                      <input class="qa-num" data-f="PVEM" inputmode="numeric" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>MORENA</td>
+                    <td>
+                      <input
+                        class="qa-num"
+                        data-f="MORENA"
+                        inputmode="numeric"
+                      />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><b>VOTOS (total)</b></td>
+                    <td>
+                      <input
+                        class="qa-num"
+                        data-f="VOTOS"
+                        inputmode="numeric"
+                      />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>LN</td>
+                    <td>
+                      <input class="qa-num" data-f="LN" inputmode="numeric" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Sprite de íconos (inline, sin dependencias) -->
+    <svg style="display: none">
+      <symbol id="ic-history" viewBox="0 0 24 24">
+        <path
+          d="M13 3a9 9 0 1 1-9 9H2l3.5-3.5L9 12H6a7 7 0 1 0 7-7v2h-2V3zM12 7h2v5l3 1-0.5 1.9L12 13V7z"
+        />
+      </symbol>
+      <symbol id="ic-trophy" viewBox="0 0 24 24">
+        <path
+          d="M18 2H6v2H3v3a5 5 0 0 0 5 5 5 5 0 0 0 4 2 5 5 0 0 0 4-2 5 5 0 0 0 5-5V4h-3V2zM5 6V6.2A3 3 0 0 0 8 9a7 7 0 0 1-3-3zM19 6v.2A3 3 0 0 1 16 9a7 7 0 0 0 3-3zM10 16h4v2h-4v-2zm-2 4h8v2H8v-2z"
+        />
+      </symbol>
+      <symbol id="ic-compare" viewBox="0 0 24 24">
+        <path d="M10 3H5v18h5V3zm9 0h-5v18h5V3zM8 7h1v10H8V7zm7 0h1v10h-1V7z" />
+      </symbol>
+      <symbol id="ic-forecast" viewBox="0 0 24 24">
+        <path
+          d="M6 19a4 4 0 1 1 1-7.874A6 6 0 1 1 18 18H6zm0-2h12a4 4 0 1 0-1.264-7.787A6.002 6.002 0 0 0 6.126 13H6a2 2 0 1 0 0 4z"
+        />
+      </symbol>
+      <symbol id="ic-download" viewBox="0 0 24 24">
+        <path
+          d="M12 3v10l4-4 1.4 1.4L12 16 6.6 10.4 8 9l4 4V3h0zM5 19h14v2H5v-2z"
+        />
+      </symbol>
+      <symbol id="ic-menu" viewBox="0 0 24 24">
+        <path d="M4 7h16v2H4V7zm0 4h16v2H4v-2zm0 4h10v2H4v-2z" />
+      </symbol>
+    </svg>
+
+    <!-- === SCRIPT ÚNICO === -->
+    <script src="analisis_territorial.js"></script>
+
+    <!-- Modal de ayuda con acordeón -->
+    <div id="help-modal" class="hm" style="display: none">
+      <div class="hm-content">
+        <div class="hm-hdr">
+          <strong>Ayuda de consultas</strong>
+          <button id="help-close" class="btn-close" aria-label="Cerrar">
+            ×
+          </button>
+        </div>
+        <div id="help-accordion" class="hm-body"></div>
+      </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,449 @@
+﻿      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: #f4f4f4;
+      }
+      :root {
+        --sidebar-w: 260px;
+      }
+      body {
+        display: grid;
+        grid-template-columns: var(--sidebar-w) 1fr 1fr;
+        grid-template-rows: 100vh;
+        overflow: hidden;
+      }
+      #campo-layout {
+        display: contents;
+      }
+      #panel-lateral {
+        width: var(--sidebar-w);
+        height: 100vh;
+        background: linear-gradient(180deg, #8ea3ad 0%, #dfe6e9 100%);
+        color: #2c3e50;
+        border-right: 1px solid #b2bec3;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+        align-items: stretch;
+        z-index: 2000;
+        overflow-y: auto;
+      }
+      #panel-header {
+        background: #b2bec3;
+        color: #2c3e50;
+        padding: 12px 15px;
+        display: flex;
+        align-items: center;
+        font-size: 18px;
+        font-weight: bold;
+      }
+      #panel-header img {
+        height: 32px;
+        margin-right: 10px;
+      }
+
+      .btn-oficina-ruta-inteligente{
+        background: linear-gradient(135deg, #ff8a00, #ff5e00);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,.18);
+        transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+      }
+
+      .btn-oficina-ruta-inteligente:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(0,0,0,.22);
+      }
+
+      .btn-oficina-ruta-inteligente:active{
+        transform: translateY(0);
+      }
+
+      .btn-oficina-ruta-inteligente:disabled{
+        opacity: .6;
+        cursor: not-allowed;
+      }
+
+      /* === Botón CAMPO integrado al panel lateral === */
+      .btn-campo {
+        background: linear-gradient(90deg, #09b7ce 0%, #0c8d8d 100%);
+        color: #fff;
+        font-weight: 600;
+        border: none;
+        border-radius: 14px;
+        padding: 10px 16px;
+        font-size: 15px;
+        width: 90%;
+        max-width: 240px;
+        cursor: pointer;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+        transition: all 0.25s ease;
+      }
+      .btn-campo:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+        background: linear-gradient(90deg, #0c8d8d 0%, #09b7ce 100%);
+      }
+      .btn-campo i {
+        margin-right: 6px;
+      }
+
+      #map-wrap {
+        position: relative;
+        height: 100vh;
+        min-width: 0;
+        overflow: hidden;
+      }
+      #map {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      #campo-dashboard {
+        height: 100vh;
+        min-width: 0;
+        overflow: hidden;
+        background: #f2f6fb;
+        border-left: 1px solid #d3dbe0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        box-sizing: border-box;
+      }
+      #dash-panels {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 0;
+        overflow: auto;
+        padding-right: 4px;
+      }
+
+      #sec-search {
+        position: relative;
+      } /* contenedor del buscador */
+      #sec-suggest {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        top: 46px; /* ajusta según tu input */
+        max-height: 220px;
+        overflow: auto;
+        z-index: 3000;
+      }
+      /* la lista queda clickeable */
+
+      /* Etiqueta de la SECCIÓN seleccionada (rosa tenue) */
+      .sec-label {
+        background: rgba(255, 235, 238, 0.96); /* #ffebee */
+        border: 1px solid #e91e63;
+        color: #880e4f;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        pointer-events: none;
+        white-space: nowrap;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      /* Etiquetas de SECCIONES ADYACENTES (azul/gris tenue) */
+      .sec-label-adj {
+        background: rgba(227, 242, 253, 0.94); /* #e3f2fd */
+        border: 1px solid #64b5f6;
+        color: #0d47a1;
+        padding: 1px 5px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        pointer-events: none;
+        white-space: nowrap;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+      }
+
+      /* Panel compacto móvil */
+      @media (max-width: 768px) {
+        .ec-panel {
+          right: 8px;
+          left: 8px;
+          width: auto;
+          max-width: none;
+          padding: 10px;
+          top: auto;
+          bottom: 70px;
+        }
+        .ec-launcher {
+          right: 12px;
+          bottom: 12px;
+        }
+        .ec-field {
+          margin-bottom: 8px;
+        }
+        .ec-grid2 {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+        .ec-actions {
+          gap: 6px;
+        }
+        .ec-btn,
+        .ec-primary,
+        .ec-secondary,
+        .ec-tertiary {
+          padding: 8px 10px;
+          border-radius: 10px;
+        }
+        .ec-header {
+          position: sticky;
+          top: 0;
+          background: #fff;
+          padding-bottom: 6px;
+        }
+      }
+
+      /* Drag handle en el header del panel */
+      #estrategico-campo-panel {
+        position: fixed;
+      }
+      #estrategico-campo-panel .ec-header {
+        cursor: move;
+        user-select: none;
+      }
+
+      #estrategico-campo-panel input,
+      #estrategico-campo-panel select,
+      #estrategico-campo-panel textarea {
+        font-size: 14px;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+      }
+
+      /* Panel flotante sección */
+      #sec-info {
+        position: absolute;
+        right: 16px;
+        bottom: 16px;
+        width: 320px;
+        max-width: 38vw;
+        min-width: 260px;
+        background: #ffffff;
+        border: 1px solid #cfd8dc;
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+        resize: both;
+        overflow: auto;
+        z-index: 4000;
+        display: none;
+        pointer-events: auto;
+      }
+      #sec-info.dock-panel {
+        display: block;
+      }
+      #sec-info .hdr {
+        cursor: move;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(180deg, #eceff1, #e3f2fd);
+        padding: 8px 12px;
+        border-bottom: 1px solid #cfd8dc;
+        font-weight: 700;
+        color: #263238;
+      }
+
+      #sec-info .hdr .btn-close {
+        cursor: pointer;
+        border: none;
+        outline: none;
+        background: #ffcdd2; /* rosa tenue */
+        color: #880e4f;
+        width: 24px;
+        height: 24px;
+        line-height: 24px;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 800;
+      }
+      #sec-info .hdr .btn-close:hover {
+        background: #ef9a9a;
+      }
+      #sec-info .body {
+        padding: 10px 12px;
+        color: #37474f;
+      }
+      #sec-info .row {
+        display: flex;
+        justify-content: space-between;
+        margin: 6px 0;
+      }
+      #sec-info .k {
+        color: #607d8b;
+      }
+      #sec-info .v {
+        font-weight: 600;
+      }
+      .dock-panel {
+        position: relative !important;
+        left: auto !important;
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        resize: none !important;
+        box-sizing: border-box;
+        z-index: auto !important;
+      }
+      .dock-panel .hdr,
+      .dock-panel .ec-header {
+        cursor: default !important;
+      }
+      #estrategico-campo-panel.dock-panel {
+        max-height: none;
+      }
+
+      .ec-hidden {
+        display: none;
+      }
+      .ec-launcher {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 1200;
+        background: #ffffff;
+        border: 1px solid #e6e6e6;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        padding: 10px 14px;
+        border-radius: 14px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .ec-panel {
+        position: fixed;
+        right: 16px;
+        top: 70px;
+        width: 360px;
+        max-height: 80vh;
+        overflow: auto;
+        z-index: 1201;
+        background: #fff;
+        border: 1px solid #ececec;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
+        border-radius: 16px;
+        padding: 12px;
+      }
+      .ec-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .ec-icon {
+        background: transparent;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .ec-tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .ec-tab {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #eee;
+        background: #f9f9f9;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      .ec-tab-active {
+        background: #fff;
+        border-color: #ddd;
+        font-weight: 600;
+      }
+      .ec-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .ec-grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .ec-captura-modos {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .ec-btn {
+        border: 1px solid #ddd;
+        background: #f0f2f5;
+        padding: 8px 10px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      .ec-primary {
+        background: #4a90e2;
+        color: #fff;
+        border: none;
+      }
+      .ec-secondary {
+        background: #f1f1f1;
+      }
+      .ec-tertiary {
+        background: #fff;
+        border: 1px dashed #ddd;
+      }
+      .ec-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .ec-counter {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #666;
+      }
+      .ec-grow {
+        flex: 1;
+      }
+
+      .marker-num{
+        background: transparent !important;
+        border: none !important;
+      }
+
+      .marker-num-inner{
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #2563eb;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1;
+        box-shadow: 0 1px 4px rgba(0,0,0,.35);
+        border: 1px solid #ffffff;
+      }
+    

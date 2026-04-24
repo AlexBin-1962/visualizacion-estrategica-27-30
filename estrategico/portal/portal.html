@@ -1,0 +1,361 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AT · Portal</title>
+  <link rel="stylesheet" href="../assets/css/base.css"/>
+  <link rel="icon" type="image/svg+xml" href="../assets/logo-at.svg">
+  <link rel="alternate icon" href="../assets/logo-at.svg">
+
+  <!-- ===================== -->
+  <!-- Estilos internos CSS -->
+  <!-- ===================== -->
+    <link rel="stylesheet" href="portal.css"/>
+</head>
+<body>
+
+    <!-- LADO IZQUIERDO: LOGO RESPONSIVO -->
+      <aside class="side-left" aria-label="Identidad de la APP">
+        <div class="brand-card">
+          <img class="brand-img" src="../assets/logo-at.svg" alt="Logo AT Análisis Estratégico">
+        </div>
+      
+
+          <defs>
+            <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#4A90E2"/>
+              <stop offset="1" stop-color="#2B6CB0"/>
+            </linearGradient>
+          </defs>
+          <!-- Círculo exterior -->
+          <circle cx="100" cy="100" r="92" fill="none" stroke="url(#g1)" stroke-width="12"/>
+          <!-- Divisiones (3 módulos) -->
+          <path d="M100 100 L100 12" stroke="#4A90E2" stroke-width="10" stroke-linecap="round"/>
+          <path d="M100 100 L27 170" stroke="#4A90E2" stroke-width="10" stroke-linecap="round"/>
+          <path d="M100 100 L173 170" stroke="#4A90E2" stroke-width="10" stroke-linecap="round"/>
+          <!-- Rellenos suaves de los 3 sectores -->
+          <path d="M100 12 A88 88 0 0 1 173 170 L100 100 Z" fill="#EEF3FA"/>
+          <path d="M27 170 A88 88 0 0 1 100 12 L100 100 Z" fill="#E9EEF5"/>
+          <path d="M173 170 A88 88 0 0 1 27 170 L100 100 Z" fill="#F3F6FB"/>
+
+          <!-- ICONO 1: MAPA (Análisis Territorial) -->
+          <path d="M138 58 l12 6 -6 10 8 7 -10 8 -9 -5 -8 5 -9 -7 7 -9 -5 -10 10 -7 10 2z"
+                fill="#4A90E2" opacity="0.9"/>
+
+          <!-- ICONO 2: FLECHA ASCENDENTE (Ganar Todo) -->
+          <path d="M105 105 L160 150" stroke="#2B6CB0" stroke-width="10" stroke-linecap="round"/>
+          <polygon points="160,150 148,148 156,138" fill="#2B6CB0"/>
+
+          <!-- ICONO 3: PERSONA + CHECK (Campo) -->
+          <circle cx="70" cy="132" r="12" fill="#4A90E2"/>
+          <path d="M56 160 q14 -12 28 0 v10 h-28z" fill="#4A90E2"/>
+          <path d="M86 152 l8 8 14 -18" fill="none" stroke="#2B6CB0" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </aside>
+
+    <!-- LADO DERECHO: PANEL ESTRATÉGICO -->
+    <aside id="sr-panel" class="side-right sr-panel" aria-label="Descripción del proyecto">
+      <!-- Botón toggle (siempre visible) -->
+      <button id="sr-toggle" class="sr-toggle" aria-controls="sr-panel" aria-expanded="true" title="Mostrar/Ocultar info">
+        <!-- ícono flecha -->
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="sr-card" role="region" aria-label="AT Análisis Estratégico 2027">
+        <header class="sr-header">
+          <div class="sr-miniMark" aria-hidden="true">
+            <!-- minilogo -->
+            <svg viewBox="-8 -8 216 216">
+              <circle cx="100" cy="100" r="92" fill="none" stroke="#4A90E2" stroke-width="12" opacity=".25"/>
+              <path d="M100 100 L100 12 M100 100 L27 170 M100 100 L173 170" stroke="#4A90E2" stroke-width="10" stroke-linecap="round" opacity=".2"/>
+            </svg>
+          </div>
+          <div class="sr-headings">
+            <h3>AT Análisis Estratégico 2027</h3>
+            <p>Datos claros para decisiones de campaña.</p>
+          </div>
+        </header>
+
+      <div class="sr-kpis">
+        <div class="sr-kpi">
+          <span class="sr-kpi-label">Top secciones foco</span>
+          <span id="kpi-top" class="sr-kpi-value">12</span>   <!-- ⬅️ ID -->
+        </div>
+        <div class="sr-kpi">
+          <span class="sr-kpi-label">Margen &lt; 3%</span>
+          <span id="kpi-m3" class="sr-kpi-value">8</span>     <!-- ⬅️ ID -->
+        </div>
+        <div class="sr-kpi">
+          <span class="sr-kpi-label">Abstención alta</span>
+          <span id="kpi-abst" class="sr-kpi-value">15</span>  <!-- ⬅️ ID -->
+        </div>
+      </div>
+
+      <div class="sr-progress">
+          <span class="sr-prog-label">Ruta 2027</span>
+          <div class="sr-prog-bar"><i style="width: 64%"></i></div>
+          <span class="sr-prog-num">64%</span>
+        </div>
+
+        <div class="sr-tips" aria-live="polite">
+          <span class="sr-tip">Prioriza secciones con margen &lt; 3%.</span>
+          <span class="sr-tip">Cruza abstención 2024 vs. crecimiento LN.</span>
+          <span class="sr-tip">DF 2: concentra brigadas en Top-N secciones.</span>
+        </div>
+
+        <a class="sr-cta" href="#" role="button" aria-label="Ver guía rápida">
+          Ver guía rápida
+        </a>
+
+
+      </div>
+    </aside>
+
+
+    <!-- MODAL: GUÍA RÁPIDA -->
+    <div id="sr-modal" class="sr-modal" aria-hidden="true">
+      <div class="sr-modal__backdrop" data-sr-close></div>
+
+      <div class="sr-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="sr-modal-title">
+        <button class="sr-modal__close" type="button" data-sr-close aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+      <div class="sr-view sr-view--quick">
+
+        <h3 id="sr-modal-title">Guía rápida</h3>
+        <p class="sr-modal__lead">Pasos exprés para usar el portal en demo con el DF 2.</p>
+
+        <ol class="sr-modal__list">
+          <li><strong>Selecciona el universo</strong> (elige <em>solo uno</em>): Municipio, Distrito Federal o Distrito Local.</li>
+          <li><strong>Análisis Territorial</strong>: mapas e histórico 2018–2024 para entender tendencia y márgenes.</li>
+          <li><strong>Ganar Todo</strong>: identifica secciones clave por <em>margen &lt; 3%</em>, abstención alta y metas por sección.</li>
+          <li><strong>Campo</strong>: levanta y monitorea reportes del territorio (brigadas, avances, incidencias).</li>
+          <li><strong>Ruta DF 2</strong>: elige <em>DF 2</em> → abre <em>Ganar Todo</em> → vista “¿Qué se requiere para ganar?” → prioriza Top-N secciones.</li>
+        </ol>
+
+        <div class="sr-modal__chips">
+          <span class="chip">Atajo: Ctrl + K (búsqueda)</span>
+          <span class="chip">Tip: exporta capturas para PPT</span>
+          <span class="chip">Tip: revisa abstención 2024</span>
+        </div>
+      </div>
+
+      <div class="sr-view sr-view--manual" hidden>
+        <h3>Manual AT Análisis 27-30</h3>
+
+        <div class="sr-modal__content">
+          <br><br>
+          <h4>Capítulo 1 · Introducción</h4>
+          AT Análisis 27-30 es una plataforma integral...<br><br>
+
+          <h4>Capítulo 2 · Visión General</h4>
+          La app se organiza en módulos...<br><br>
+        </div>
+      </div>
+
+
+      <div class="sr-modal__footer">
+        <button class="sr-btn" type="button" id="btnVerManual">
+          Ver manual completo
+        </button>
+
+        <button class="sr-btn sr-btn--primary" type="button" data-sr-close>
+          Entendido
+        </button>
+      </div>
+
+      </div>
+    </div>
+
+
+
+  <main class="wrap">
+    <!-- =============================== -->
+    <!-- Sección: Filtros de selección  -->
+    <!-- =============================== -->
+    <div class="card">
+      <h2>Selecciona el universo (elige <b>solo uno</b>)</h2>
+
+      <div class="grid">
+          <!-- Filtro: Municipio -->
+          <div class="row span4">
+            <label>Municipio</label>
+            <select id="sel-mun"><option value="">— Ninguno —</option></select>
+          </div>
+          <!-- Filtro: Distrito Federal -->
+          <div class="row span4">
+            <label>Distrito Federal</label>
+            <select id="sel-df"><option value="">— Ninguno —</option></select>
+          </div>
+          <!-- Filtro: Distrito Local -->
+          <div class="row span4">
+            <label>Distrito Local</label>
+            <select id="sel-dl"><option value="">— Ninguno —</option></select>
+          </div>
+
+          <!-- Checkbox: Estado completo -->
+          <div class="row span12">
+            <label><input type="checkbox" id="all-state"/> Estado completo (todas las secciones)</label>
+            <div class="hint">Ignora Municipio/DF/DL y muestra todas las secciones del estado.</div>
+          </div>
+
+          <!-- Resumen del universo seleccionado -->
+          <div class="row span12">
+            <div id="u-sum" class="hint">Universo: —</div>
+          </div>
+
+          <!-- Inputs: Rutas de archivos -->
+          <div class="row span6">
+            <label>GeoJSON</label>
+            <input id="geo" value="../data/geo/secciones.geojson"/>
+          </div>
+          <div class="row span6">
+            <label>Catálogo territorial (nombres)</label>
+            <input id="catalog" value="../data/catalogo_territorial.json"/>
+          </div>
+
+          <!-- Acciones (botones) -->
+          <div class="row span12 actions">
+            <!--<button class="btn" id="load">Cargar opciones</button>-->
+            <!--<button class="btn primary" id="open">Abrir Análisis Territorial</button>-->
+          </div>
+        </div>
+      </div>
+
+  <!-- =============================== -->
+  <!-- Sección: Tarjetas de módulos   -->
+  <!-- =============================== -->
+  <!-- Tarjetas de módulos: DESHABILITADAS hasta "Cargar opciones" -->
+  <section id="mods" class="modgrid">
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-analisis">📊</div>
+          <div><div class="modtitle">Análisis Territorial</div><div class="moddesc">Mapas, comparativas y consultas.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('../analisis_territorial/analisis_territorial.html','_self')">Abrir</button>
+      </div>
+
+        <!-- Tarjeta: Social -->
+        <div class="modcard disabled">
+          <div class="modhead">
+            <div class="modico i-social" style="background:#3b82f6">💬</div>
+            <div>
+              <div class="modtitle">Social</div>
+              <div class="moddesc">Redes, interacción y comunicación.</div>
+            </div>
+          </div>
+    <button class="btn mod-btn" onclick="window.open('../socioeconomico/socioeconomico.html','_self')">Abrir</button>
+        </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-ganar">🏆</div>
+          <div><div class="modtitle">Ganar Todo</div><div class="moddesc">Brechas, metas, priorización.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('../ganar_todo/ganar_todo.html','_self')">Abrir</button>
+      </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-campo">🗺️</div>
+          <div><div class="modtitle">Campo</div><div class="moddesc">Levantamientos y control.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('../campo/campo.html','_self')">Abrir</button>
+      </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-estr">👥</div>
+          <div><div class="modtitle">Estructura</div><div class="moddesc">Representantes y crecimiento.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('../estructura/estructura.html','_self')">Abrir</button>
+      </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-diad">📅</div>
+          <div><div class="modtitle">Día D</div><div class="moddesc">Metas y operación.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('../dia_D/dia_D.html','_self')">Abrir</button>
+      </div>
+    </section>
+
+  </main>
+
+    <!-- ===================== -->
+    <!-- Scripts de la página -->
+    <!-- ===================== -->
+    <script src="portal.js"></script>
+
+    
+
+
+
+
+
+  <!-- BOTÓN MODO PRESENTACIÓN -->
+  <button id="preso-btn" class="preso-btn" title="Modo presentación (P)">
+    <!-- icono pantalla -->
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="M4 5h16v10H4zM8 19h8" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  
+
+  
+
+  
+
+
+    <div id="manualATModal" class="manual-modal hidden">
+    <div class="manual-panel">
+
+      <div class="manual-header">
+        <h2>Manual AT Análisis 27-30</h2>
+        <button id="cerrarManualAT">✕</button>
+      </div>
+
+      <div class="manual-content">
+        <div id="manualATContent" data-src="../data/Manual/manual.txt">
+          <p>El manual se cargara aqui.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <nav class="manual-index">
+    <a href="#cap1">Intro</a>
+    <a href="#cap2">Visión</a>
+    <a href="#cap3">Navegación</a>
+    <a href="#cap4">AT</a>
+    <a href="#cap5">GT</a>
+    <a href="#cap6">AS</a>
+    <a href="#cap7">CT</a>
+    <a href="#cap8">ET</a>
+    <a href="#cap9">DD</a>
+    <a href="#cap10">Cierre</a>
+  </nav>
+
+          <button id="btnManualAT" class="btn-manual">
+          📘 Manual AT 27-30
+        </button>
+
+
+
+  
+
+</body>
+</html>
+
+

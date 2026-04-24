@@ -1,0 +1,190 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dia "D"</title>
+  <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+    <link rel="stylesheet" href="dia_D.css"/>
+</head>
+<body>
+  <div id="dd-layout">
+  <div id="panel-lateral">
+    <div id="panel-header">
+      <!-- <img src="../assets/img/logo.png" alt="Logo"/> -->
+      <span>Dia "D"</span>
+    </div>
+    <!-- Aquí va el contenido del panel lateral -->
+
+    <!-- Buscador de secciones -->
+    <div id="sec-search" style="padding:10px 12px; border-top:1px solid #cbd5e1; background:#eef2f7">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input id="sec-q" type="text" placeholder="Buscar sección (ej. 1234 o '1234 León')" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"
+              style="flex:1; padding:6px 8px; border:1px solid #94a3b8; border-radius:6px;">
+        <label style="white-space:nowrap; font-size:12px;">
+          <input id="sec-global" type="checkbox"> Todo el estado
+        </label>
+      </div>
+      <ul id="sec-suggest" style="margin:8px 0 0 0; padding:0; list-style:none; max-height:180px; overflow:auto;
+                                  border:1px solid #cbd5e1; border-radius:6px; background:#fff; display:none;"></ul>
+    </div>
+
+
+
+    <div id="mini-universe" style="padding:12px 12px 6px 12px; background:#eef2f7; border-top:1px solid #cbd5e1">
+        <div class="row" style="margin-bottom:8px">
+            <label><input type="checkbox" id="mini-all-state"> Estado completo</label>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+            <label>Municipio</label>
+            <select id="mini-sel-mun" style="width:100%;padding:6px"><option value="">— Ninguno —</option></select>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+            <label>Distrito Federal</label>
+            <select id="mini-sel-df" style="width:100%;padding:6px"><option value="">— Ninguno —</option></select>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+            <label>Distrito Local</label>
+            <select id="mini-sel-dl" style="width:100%;padding:6px"><option value="">— Ninguno —</option></select>
+        </div>
+        <div class="hint" style="font-size:12px;color:#64748b">Elige solo uno. Al cambiar, el mapa se actualiza.</div>
+    </div>
+
+    <div id="casillas-toolbar">
+      <div class="ct-wrap">
+        <button id="btn-cargar-casillas" type="button">Cargar casillas</button>
+      </div>
+    </div>
+  </div>
+  <div id="map-wrap">
+    <div id="map"></div>
+  </div>
+  <div id="dd-dashboard">
+    <div id="dash-panels">
+      <div id="sec-info">
+        <div class="hdr">
+          <span class="ttl">Sección</span>
+          <button id="sec-close" class="btn-close" aria-label="Cerrar">×</button>
+        </div>
+        <div class="body">
+          <div class="row"><span class="k">Sección</span>        <span class="v" id="si-sec">—</span></div>
+          <div class="row"><span class="k">Distrito Federal</span><span class="v" id="si-df">—</span></div>
+          <div class="row"><span class="k">Distrito Local</span>  <span class="v" id="si-dl">—</span></div>
+          <div class="row"><span class="k">LN (2024)</span>    <span class="v" id="si-ln">—</span></div>
+        </div>
+      </div>
+
+      <div id="casillas-panel">
+        <div class="cp-hdr">
+          <span>Casillas sección <span class="cp-sec">—</span></span>
+          <small></small>
+          <button class="cp-close" aria-label="Cerrar">×</button>
+        </div>
+        <div class="cp-body">
+          <div class="cp-empty">Selecciona una sección para ver sus casillas.</div>
+        </div>
+        <div class="cp-resizer" title="Redimensionar"></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- === SCRIPT ÚNICO === -->
+  <script src="dia_D.js"></script>
+  <div id="acta-modal-backdrop">
+    <div id="acta-modal">
+      <div class="am-hdr">
+        <div>
+          <div>Captura de acta</div>
+          <small class="am-meta">Sección — · Casilla —</small>
+        </div>
+        <button class="cp-close" aria-label="Cerrar" style="margin-left:auto; border:none; background:transparent; font-size:18px; cursor:pointer;">×</button>
+      </div>
+      <div class="am-body">
+        <table id="acta-table">
+          <!-- se rellena por JS -->
+        </table>
+      </div>
+      <div class="am-foot">
+        <button class="btn" id="acta-cancel">Cancelar</button>
+        <button class="btn primary" id="acta-save">Guardar acta</button>
+      </div>
+    </div>
+  </div>
+
+<div id="estatus-modal-backdrop">
+  <div id="estatus-modal" style="width:min(680px,92vw);">
+    <div class="am-hdr">
+      <div>
+        <div>Estatus y cortes de casilla</div>
+        <small class="am-meta est-meta">Sección — · Casilla —</small>
+      </div>
+      <button class="cp-close est-close" aria-label="Cerrar">×</button>
+    </div>
+    <div class="am-body">
+      <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;">
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; color:#475569;">
+          Estatus día D
+          <select id="est-dia-status" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px;">
+            <option value="SIN_REPORTE">Sin reporte</option>
+            <option value="INSTALADA">Instalada</option>
+            <option value="INCIDENCIA">Incidencia</option>
+            <option value="ACTA_RECIBIDA">Acta recibida</option>
+            <option value="CERRADA">Cerrada</option>
+          </select>
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; color:#475569;">
+          Hora de apertura
+          <input id="est-dia-apertura-hora" type="time" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px;">
+        </label>
+        <label style="grid-column:span 2; display:flex; flex-direction:column; gap:4px; font-size:13px; color:#475569;">
+          Observaciones de apertura
+          <input id="est-dia-apertura-obs" type="text" placeholder="Ej. abrió 8:30, sin incidentes" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; color:#475569;">
+          Corte 11:00 (votantes)
+          <input id="est-dia-corte-11" type="number" min="0" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; color:#475569;">
+          Corte 13:00 (votantes)
+          <input id="est-dia-corte-13" type="number" min="0" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; color:#475569;">
+          Corte 17:00 (votantes)
+          <input id="est-dia-corte-17" type="number" min="0" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; color:#475569;">
+          Cierre: votantes
+          <input id="est-dia-cierre-vot" type="number" min="0" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px;">
+        </label>
+        <label style="display:flex; flex-direction:column; gap:4px; font-size:13px; color:#475569;">
+          Cierre: hora
+          <input id="est-dia-cierre-hora" type="time" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px;">
+        </label>
+        <label style="grid-column:span 2; display:flex; flex-direction:column; gap:4px; font-size:13px; color:#475569;">
+          Observaciones de cierre
+          <input id="est-dia-cierre-obs" type="text" placeholder="Ej. cerró 18:05, sin incidentes" style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px;">
+        </label>
+      </div>
+    </div>
+    <div class="am-foot">
+      <button class="btn" id="est-cancel">Cancelar</button>
+      <button class="btn primary" id="est-save">Guardar</button>
+    </div>
+    <div class="est-resizer" title="Redimensionar"></div>
+  </div>
+</div>
+
+
+
+</body>
+</html>
+
+

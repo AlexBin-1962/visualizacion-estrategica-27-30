@@ -1,0 +1,362 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estructura Territorial</title>
+    <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet" />
+    <script src="../core/estrategico-core.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <!-- Leaflet.markercluster (clustering for ET-27) -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"
+    />
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+      <link rel="stylesheet" href="estructura.css"/>
+
+    
+  </head>
+  <body>
+    <div id="estructura-layout">
+    <div id="panel-lateral">
+      <div id="panel-header">
+        <!-- <img src="../assets/img/logo.png" alt="Logo"/> -->
+        <span>Estructura Territorial</span>
+      </div>
+      <!-- Aquí va el contenido del panel lateral -->
+
+      <!-- Buscador de secciones -->
+      <div
+        id="sec-search"
+        style="
+          padding: 10px 12px;
+          border-top: 1px solid #cbd5e1;
+          background: #eef2f7;
+        "
+      >
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input
+            id="sec-q"
+            type="text"
+            placeholder="Buscar sección (ej. 1234 o '1234 León')"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="search"
+            style="
+              flex: 1;
+              padding: 6px 8px;
+              border: 1px solid #94a3b8;
+              border-radius: 6px;
+            "
+          />
+          <label style="white-space: nowrap; font-size: 12px">
+            <input id="sec-global" type="checkbox" /> Todo el estado
+          </label>
+        </div>
+        <ul
+          id="sec-suggest"
+          style="
+            margin: 8px 0 0 0;
+            padding: 0;
+            list-style: none;
+            max-height: 180px;
+            overflow: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            display: none;
+          "
+        ></ul>
+      </div>
+
+      <div
+        id="mini-universe"
+        style="
+          padding: 12px 12px 6px 12px;
+          background: #eef2f7;
+          border-top: 1px solid #cbd5e1;
+        "
+      >
+        <div class="row" style="margin-bottom: 8px">
+          <label
+            ><input type="checkbox" id="mini-all-state" /> Estado
+            completo</label
+          >
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Municipio</label>
+          <select id="mini-sel-mun" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Federal</label>
+          <select id="mini-sel-df" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Local</label>
+          <select id="mini-sel-dl" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="hint" style="font-size: 12px; color: #64748b">
+          Elige solo uno. Al cambiar, el mapa se actualiza.
+        </div>
+      </div>
+    </div>
+    <div id="map-wrap">
+      <div id="map"></div>
+    </div>
+    <div id="estructura-dashboard">
+      <div id="dash-panels"></div>
+    <div id="et27-resumen-operativo" class="et27-resumen-operativo" style="display:none;">
+      <div id="et27-resumen-header" class="et27-resumen-header">
+        <h3>Resumen operativo</h3>
+        <button id="et27-btn-cerrar" type="button" aria-label="Cerrar">×</button>
+      </div>
+
+      <div id="et27-resumen-operativo-body"></div>
+    </div>
+    </div>
+
+    <!-- ET-27 Toolbar -->
+    <div id="et27-toolbar" class="et27-toolbar">
+      <button
+        id="btn-et-load"
+        class="etbtn"
+        title="Cargar/actualizar datos de estructura (ET-27)"
+      >
+        Cargar ET-27
+      </button>
+      <button
+        id="btn-et-sec"
+        class="etbtn"
+        title="Pintar cobertura por SECCIÓN (semáforo)"
+      >
+        Cobertura por Sección
+      </button>
+      <button
+        id="btn-et-cas"
+        class="etbtn"
+        title="(Demo) Cobertura por Casilla · DL 9"
+      >
+        Cobertura por Casilla
+      </button>
+      <button
+        id="btn-et-falt"
+        class="etbtn"
+        title="Abrir panel de faltantes por sección"
+      >
+        Faltantes
+      </button>
+
+      <button
+        id="btn-et-collapse"
+        class="etbtn ghost"
+        title="Colapsar barra"
+        aria-label="Colapsar"
+      >
+        ▸
+      </button>
+    </div>
+
+    <!-- Pestaña colapsada -->
+    <button
+      id="et27-toolbar-tab"
+      class="et27-toolbar-tab"
+      title="Mostrar barra ET-27"
+    >
+      ET-27
+    </button>
+
+    <!-- ET-27: Leyenda -->
+    <div class="et27-legend" id="et27-legend" style="display: none">
+      <h4>Estructura (roles)</h4>
+      <div class="row">
+        <span class="et27-dot" style="background: #6cab5a"></span> Simpatizante
+      </div>
+      <div class="row">
+        <span class="et27-dot" style="background: #d4a017"></span> Líder
+      </div>
+      <div class="row">
+        <span class="et27-dot" style="background: #d9534f"></span> Adversario
+      </div>
+      <div class="row">
+        <span class="et27-dot" style="background: #1f77b4"></span> Rep. Casilla
+      </div>
+      <div class="row">
+        <span class="et27-dot" style="background: #6f42c1"></span> Rep. General
+      </div>
+      <div class="row">
+        <span class="et27-dot" style="background: #2aa198"></span> Observador
+      </div>
+      <hr style="margin: 8px 0; border: none; border-top: 1px solid #f1f5f9" />
+      <h4>Casillas (cobertura)</h4>
+      <div class="row">
+        <span class="et27-dot" style="background: #2ca02c"></span> Cubierta
+      </div>
+      <div class="row">
+        <span class="et27-dot" style="background: #ffbf00"></span> Parcial
+      </div>
+      <div class="row">
+        <span class="et27-dot" style="background: #d62728"></span> Sin cobertura
+      </div>
+    </div>
+
+    <!-- ET-27: Panel de Faltantes -->
+    <div class="et27-panel" id="et27-panel">
+      <header>
+        <div class="ttl">Faltantes de Cobertura</div>
+        <div class="act">
+          <button class="et27-btn" id="et27-export-csv">Exportar CSV</button>
+          <button class="et27-btn" id="et27-close-panel">Cerrar</button>
+        </div>
+      </header>
+      <div style="padding: 8px 12px">
+        <table class="et27-table" id="et27-table">
+          <thead>
+            <tr>
+              <th>Ámbito</th>
+              <th>Clave</th>
+              <th>Casillas</th>
+              <th>Req.Rep</th>
+              <th>Asig.Rep</th>
+              <th>Faltan</th>
+              <th>Estatus</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- === SCRIPT ÚNICO === -->
+    <script src="estructura.js"></script>
+    <div id="sec-info">
+      <div class="hdr">
+        <span class="ttl">Sección</span>
+        <button id="sec-close" class="btn-close" aria-label="Cerrar">×</button>
+      </div>
+      <div class="body">
+        <div class="row">
+          <span class="k">Sección</span> <span class="v" id="si-sec">—</span>
+        </div>
+        <div class="row">
+          <span class="k">Distrito Federal</span
+          ><span class="v" id="si-df">—</span>
+        </div>
+        <div class="row">
+          <span class="k">Distrito Local</span>
+          <span class="v" id="si-dl">—</span>
+        </div>
+        <div class="row">
+          <span class="k">LN (2024)</span> <span class="v" id="si-ln">—</span>
+        </div>
+      </div>
+    </div>
+
+    
+
+    <!-- ET-27 · Panel flotante por SECCIÓN -->
+    <div id="et27-sec-panel" style="display: none">
+      <div class="hdr">
+        <div class="ttl">Sección —</div>
+        <button class="x" id="et27-sec-close">×</button>
+      </div>
+      <div class="body">
+        <div class="cards">
+        </div>
+
+        <div class="tabs">
+          <button class="tab on" data-tab="casillas">Casillas</button>
+          <button class="tab" data-tab="personas">Personas</button>
+          <button class="tab" data-tab="resumen">Resumen</button>
+        </div>
+
+        <div class="tabc on" id="et27-tab-casillas">
+          <div class="et27-cas-tools">
+            <input
+              id="et27-cas-search"
+              type="search"
+              placeholder="Buscar casilla / localidad / domicilio…"
+            />
+            <select id="et27-cas-sort" title="Ordenar">
+              <option value="pend-desc">Pendientes primero</option>
+              <option value="pend-asc">Pendientes al final</option>
+              <option value="cas-asc">Casilla A→Z</option>
+              <option value="cas-desc">Casilla Z→A</option>
+            </select>
+            <label class="chk">
+              <input id="et27-cas-missing" type="checkbox" />
+              Solo pendientes
+            </label>
+          </div>
+
+          <ul class="cas-list" id="et27-cas-list"></ul>
+          <div class="legend">
+            <span class="dot ok"></span> ≥2 asignados
+            <span class="dot mid"></span> 1 asignado
+            <span class="dot bad"></span> 0 asignados
+          </div>
+        </div>
+
+        <div class="tabc" id="et27-tab-personas">
+          <div class="et27-personas-toolbar">
+            <span>Agregar:</span>
+            <button id="et27-add-rep-casilla" class="btn-add-persona">
+              + Rep. casilla
+            </button>
+            <button id="et27-add-rep-seccion" class="btn-add-persona">
+              + Rep. sección
+            </button>
+          </div>
+
+          <div class="role-box">
+            <div class="role-ttl">REPRESENTANTE DE CASILLA</div>
+            <ul id="et27-list-repcas"></ul>
+          </div>
+          <div class="role-box">
+            <div class="role-ttl">REPRESENTANTE DE SECCIÓN</div>
+            <ul id="et27-list-repsec"></ul>
+          </div>
+          <div class="role-box">
+            <div class="role-ttl">COORDINADOR DISTRITAL</div>
+            <ul id="et27-list-coord"></ul>
+          </div>
+          <details style="margin-top: 8px">
+            <summary>Otros (simpatizantes, líderes, observadores…)</summary>
+            <ul id="et27-list-otros"></ul>
+          </details>
+          <div class="et27-personas-actions">
+            <button id="et27-personas-export" class="btn-export">
+              Exportar cambios (CSV)
+            </button>
+          </div>
+        </div>
+
+        <div class="tabc" id="et27-tab-resumen">
+          <div id="et27-resumen-text" class="resumen"></div>
+        </div>
+      </div>
+      <div class="et27-resizer et27-resizer-br" title="Redimensionar"></div>
+    </div>
+    
+
+    
+    </div>
+  </body>
+</html>

@@ -4,42 +4,14 @@
     {
       "type": "Feature",
       "properties": {
-        "ID": "99404271-5ac3-41fe-82dd-ddfd4b38f313",
-        "TS": "2025-10-29T03:16:53.294Z",
+        "ID": "6990ea20-9954-4249-85a1-29095fa07d71",
+        "TS": "2026-04-19T16:49:40.802Z",
         "ORIGEN": "CT-27",
         "ESTATUS": "ACTIVO",
-        "TIPO": "REP_CASILLA",
-        "NOMBRE": "ZOTA PEREZ",
-        "TELEFONO": "4771234567",
-        "DOMICILIO": "COLINA JADE 101 LEON",
-        "PROMOTOR_PIN": "2701",
-        "SECCION": "1481",
-        "DISTRITO_L": "3",
-        "DISTRITO_F": "3",
-        "MUNICIPIO": "20",
-        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
-        "AMBITO": "",
-        "OBS": ""
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -101.6318039,
-          21.1642518
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "ID": "18ff78d6-2d91-4080-b9cd-8dc3e35d73ff",
-        "TS": "2025-10-29T03:18:11.086Z",
-        "ORIGEN": "CT-27",
-        "ESTATUS": "ACTIVO",
-        "TIPO": "REP_CASILLA",
-        "NOMBRE": "RAUL FRIAS",
-        "TELEFONO": "4775888657",
-        "DOMICILIO": "COLINA TURMALINA 102 LEON",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "ARTURO LOPEZ ALVAREZ",
+        "TELEFONO": "4772345672",
+        "DOMICILIO": "CALLE VIVIENDA COOPERATIVA 103, CAJA POPULAR COECILLO, LEON, GTO",
         "PROMOTOR_PIN": "2701",
         "SECCION": "1481",
         "DISTRITO_L": "3",
@@ -47,7 +19,959 @@
         "MUNICIPIO": "20",
         "MUNICIPIO_NOMBRE": "Leon de los Aldama",
         "AMBITO": "MUN:20 · DL:3 · DF:3",
-        "OBS": ""
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6452941,
+          21.1638425
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "51329b39-4fd4-46ee-a571-db4b14918dbf",
+        "TS": "2026-04-19T16:51:01.612Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "AURORA RAMIREZ SANCHEZ",
+        "TELEFONO": "4772567237",
+        "DOMICILIO": "ANDADOR CREDITO 129, CAJA POPULAR COECILLO, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6455817,
+          21.1647637
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "6d8587a4-9f19-48ee-8281-3486cbea8b2f",
+        "TS": "2026-04-19T17:04:21.954Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "LETICIA MENDOZ LOPEZ",
+        "TELEFONO": "4797805965",
+        "DOMICILIO": "CIRCUITO CAJA POPULAR ORIENTE 218, CAJA POPULAR COECILLO, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS, PERO NO APOYA EN MOVILIZACION"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6427538,
+          21.165585
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "49d1db45-fe7d-4313-8eaf-608cd7c41b0a",
+        "TS": "2026-04-19T17:09:00.234Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "ADVERSARIO",
+        "NOMBRE": "SEFERINO GONZALEZ HERNANDEZ",
+        "TELEFONO": "4775895677",
+        "DOMICILIO": "CALLE QUINTA LOS CIPRESES 107, QUINTA LOS NARANJOS, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "APOYA MUCHO AL PARTIDO ACTUAL EN EL PODER Y MUY CONOCIDO EN SU COLONIA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6431038,
+          21.1607216
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "47de4ff7-1b01-47cd-99c2-36724c597d7b",
+        "TS": "2026-04-19T17:09:52.410Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "ADVERSARIO",
+        "NOMBRE": "SEFERINO GONZALEZ HERNANDEZ",
+        "TELEFONO": "4775895677",
+        "DOMICILIO": "CALLE QUINTA LOS CIPRESES 107, QUINTA LOS NARANJOS, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "APOYA MUCHO AL PARTIDO ACTUAL EN EL PODER Y MUY CONOCIDO EN SU COLONIA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6416744,
+          21.1620824
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "b587bc33-552a-4dd7-b7ca-209d3eeec9c9",
+        "TS": "2026-04-19T17:12:32.654Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "REP_GENERAL",
+        "NOMBRE": "EULALIO GONZALEZ GONZALEZ",
+        "TELEFONO": "4772492154",
+        "DOMICILIO": "ANDADOR ACCION COOPERATIVA 124,CAJA POPULAR EL COECILLO, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "APOYA MUCHO AL PARTIDO ACTUAL EN EL PODER Y MUY CONOCIDO EN SU COLONIA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.643894,
+          21.1655579
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "7353eab3-f054-4dbf-864f-98f17c37bde8",
+        "TS": "2026-04-19T17:13:37.067Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "LIDER",
+        "NOMBRE": "EULANA MARIA REBOLLO GUZMAN",
+        "TELEFONO": "4792181416",
+        "DOMICILIO": "ANDADOR CREDITO 203, CAJA POPULAR EL COECILLO, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "APOYA MUCHO AL PARTIDO ACTUAL EN EL PODER Y MUY CONOCIDO EN SU COLONIA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6455589,
+          21.165057
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "f9f9a6ef-d638-4067-ac8a-d562c8e39545",
+        "TS": "2026-04-19T17:15:35.234Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "ARNULFO GONZALEZ LOPEZ",
+        "TELEFONO": "4771351686",
+        "DOMICILIO": "CALLE PEDRO VELAZQUEZ 421, CAJA POPULAR EL COECILLO, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "PUEDE APOYAR CON GENTE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.644863,
+          21.1644417
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "33dec4f3-dd7a-4c61-8946-f189c76a9952",
+        "TS": "2026-04-19T17:17:40.269Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "REP_CASILLA",
+        "NOMBRE": "MARISELA GUTIERREZ ARMENDARIZ",
+        "TELEFONO": "4771368165",
+        "DOMICILIO": "CIRCUITO CAJA POPULAR PONIENTE 224, CAJA POPULAR EL COECILLO, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "PUEDE APOYAR CON GENTE Y CONECE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6457615,
+          21.1657509
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "dc736d35-b53d-45b3-8f2f-1989574e1ad6",
+        "TS": "2026-04-21T16:33:07.525Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "LAURA VALLEJO ZAPAT",
+        "TELEFONO": "4792513585",
+        "DOMICILIO": "CIRCUITO CAJA POPULAR ORIENTE 208, CAJA POPULAR EL COECILLO, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "NO LE GUSTA TRABAJO DE CAMPO, PERO SI APOYA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6428362,
+          21.1648695
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "91945f54-7b1e-483a-8b5f-1c5ed7c4cfd1",
+        "TS": "2026-04-21T16:34:14.017Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "LUIS HERNANDEZ MARMOLEJO",
+        "TELEFONO": "4773261987",
+        "DOMICILIO": "CIRCUITO CAJA POPULAR ORIENTE 118, CAJA POPULAR EL COECILLO, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "NO LE GUSTA TRABAJO DE CAMPO, PERO SI APOYA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6429145,
+          21.1642908
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "62cda49b-3721-4db5-8d65-bcae0e353f2c",
+        "TS": "2026-04-21T16:35:33.998Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "ADVERSARIO",
+        "NOMBRE": "RAUL ROCHA NIÑO",
+        "TELEFONO": "4773261987",
+        "DOMICILIO": "CIRCUITO CAJA POPULAR PONIENTE 113, CAJA POPULAR EL COECILLO, LEON, GTO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "ES ADVERSARIO Y CONOCE VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.646032,
+          21.1642618
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "766b5a94-2786-4bfe-878c-bae05af42bb0",
+        "TS": "2026-04-21T16:39:43.164Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "LUIS ANGEL MENDEZ MINA",
+        "TELEFONO": "4793216581",
+        "DOMICILIO": "CALLE COLINA ZAFIRO 136A, COLINAS DE PLATA, LEON GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "SOLO ES SIMPATIZANTE, NO APOYARIA CONVOCANDO VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6313936,
+          21.168676
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "1cbbb6af-1dd5-4037-98ce-6a58bfea2774",
+        "TS": "2026-04-21T16:40:58.202Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "LIDER",
+        "NOMBRE": "MARIA TERESA LOPEZ LOPEZ",
+        "TELEFONO": "4771148519",
+        "DOMICILIO": "CALLE COLINA ZAFIRO 128A, COLINAS DE PLATA, LEON GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A MUCHOS VECINOS DE LA COLONIA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6312243,
+          21.1683477
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "be43f896-de96-4ef3-b268-833eb3bf15a8",
+        "TS": "2026-04-21T16:41:06.365Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "LIDER",
+        "NOMBRE": "MARIA TERESA LOPEZ LOPEZ",
+        "TELEFONO": "4771148519",
+        "DOMICILIO": "CALLE COLINA ZAFIRO 128A, COLINAS DE PLATA, LEON GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A MUCHOS VECINOS DE LA COLONIA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6312243,
+          21.1683477
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "366cc820-2116-46c2-9515-1e1a324092c5",
+        "TS": "2026-04-21T16:42:38.521Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "OBSERVADOR",
+        "NOMBRE": "TERESA SANTO NIÑO DE LA VEGA",
+        "TELEFONO": "4792325655",
+        "DOMICILIO": "CALLE COLINA OBSIDIANA 304, COLINAS DE PLATA, LEON GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "LE INTERESA APOYAR EN LA ELECCION DEL DIA D"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6327857,
+          21.1682232
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "b76d76a7-08a7-4ebc-8b0d-c9fe295f9ebf",
+        "TS": "2026-04-21T16:43:39.541Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "REP_GENERAL",
+        "NOMBRE": "ERNESTO RAMIREZ CASTRO",
+        "TELEFONO": "4771651651",
+        "DOMICILIO": "CALLE COLINA AMBAR 319, COLINAS DE PLATA, LEON GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "LE INTERESA APOYAR EN LA ELECCION DEL DIA D"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6333147,
+          21.167183
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "c2836496-eb96-4372-8625-6caa22406a66",
+        "TS": "2026-04-21T17:07:16.829Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "GUSTAVO NUÑEZ MARTINEZ",
+        "TELEFONO": "4791580354",
+        "DOMICILIO": "CALLE COLINA AMBAR 115, COLINAS DE PLATA, LEON GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "LE INTERESA APOYAR EN LA ELECCION DEL DIA D"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6326758,
+          21.1657222
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "d5728254-7872-4561-ab8b-debfbdfe9732",
+        "TS": "2026-04-21T17:08:25.455Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "REP_CASILLA",
+        "NOMBRE": "SEFERINO SANCHEZ PEREZ",
+        "TELEFONO": "4774135498",
+        "DOMICILIO": "CALLE COLINA AMBAR 305, COLINAS DE PLATA, LEON GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "LE INTERESA APOYAR EN LA ELECCION DEL DIA D"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6330922,
+          21.1667396
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "ef518ae1-d2e9-410c-a659-092103ac06a4",
+        "TS": "2026-04-21T17:09:04.795Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "AGUSTIN JAIME RAMOS PEREZ",
+        "TELEFONO": "4792314798",
+        "DOMICILIO": "CALLE COLINA AMBAR 205, COLINAS DE PLATA, LEON GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "LE INTERESA APOYAR EN LA ELECCION DEL DIA D"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6328256,
+          21.1661169
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "d1bba1ee-fe7c-4018-8eb9-49da5cadbb40",
+        "TS": "2026-04-21T17:10:09.901Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "SERGIO IVAN VILLALOBOS LOPEZ",
+        "TELEFONO": "4774771658",
+        "DOMICILIO": "CALLE COLINA MALAQUITA 104, COLINAS DE PLATA, LEON GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "LE INTERESA APOYAR EN LA ELECCION DEL DIA D"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6320253,
+          21.1676217
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "2b3f129c-8a0b-46df-9bad-5c1db35cafa2",
+        "TS": "2026-04-21T17:12:01.595Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "OBSERVADOR",
+        "NOMBRE": "JUAN DOMINGO SERRAT FLORES",
+        "TELEFONO": "4777166166",
+        "DOMICILIO": "CALLE COLINA TURQUESA 302, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "APOYA EN LA ELECCION DEL DIA D, COMO OBSERVADOR ELECTORAL"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6316793,
+          21.167353
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "06bec31a-7be5-4769-9b52-715fb9872653",
+        "TS": "2026-04-21T17:14:25.529Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "JUANA REYNA GUERRA LOPEZ",
+        "TELEFONO": "4777315038",
+        "DOMICILIO": "CALLE COLINA ZAFIRO 102, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "SOLO ES SIMPATIZANTE,  NO APOYA EN OTRA ACTIVIDAD"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6305341,
+          21.1673485
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "f43341cd-d0e7-4a91-94b0-1a71bb0e5e10",
+        "TS": "2026-04-21T17:16:00.062Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "OSCAR HERNANDEZ SIFUENTES",
+        "TELEFONO": "4794161949",
+        "DOMICILIO": "CALLE COLINA TURQUESA 315A, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "SOLO ES SIMPATIZANTE,  NO APOYA EN OTRA ACTIVIDAD"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6312253,
+          21.1678323
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "d8d9bf4b-71df-4fd6-9c55-4468a46b58a5",
+        "TS": "2026-04-21T17:17:17.157Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "TERESA ROBLES RAMIREZ",
+        "TELEFONO": "4791898165",
+        "DOMICILIO": "CALLE COLINA TOPACIO 211, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "SOLO SIMPATIZA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6311379,
+          21.1674588
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "c36afa83-f87e-4ce1-bbc9-5919a5fdc8ef",
+        "TS": "2026-04-21T17:18:30.326Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "FEDERICO VAZQUEZ PAEZ",
+        "TELEFONO": "4778513321",
+        "DOMICILIO": "CALLE COLINA TOPACIO 123A, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "SOLO SIMPATIZA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6319585,
+          21.1668891
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "badbd159-f8f8-4bf5-ad1f-91c7170d9663",
+        "TS": "2026-04-21T17:19:39.406Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "REP_GENERAL",
+        "NOMBRE": "LILIA REYES DURAN",
+        "TELEFONO": "4793518877",
+        "DOMICILIO": "CALLE COLINA TOPACIO 101, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "LE INTERESA APOYAR AL PROYECTO, CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6327853,
+          21.1663569
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "5fdaa202-63d8-4f84-950d-bfbcf45e51d4",
+        "TS": "2026-04-21T17:20:42.181Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "ADVERSARIO",
+        "NOMBRE": "RAFAEL PEREZ BARBA",
+        "TELEFONO": "4776916616",
+        "DOMICILIO": "CALLE COLINA ESMERALDA 221, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6319124,
+          21.1664682
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "87af13c2-f479-4de8-9ae5-d78fa7b2516b",
+        "TS": "2026-04-21T17:21:26.331Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "OBSERVADOR",
+        "NOMBRE": "ROSARIO BECERRA MENDEZ",
+        "TELEFONO": "4778164916",
+        "DOMICILIO": "CALLE COLINA ESMERALDA 318, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6306617,
+          21.1670966
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "b111fdc5-fa1d-4bbe-9e15-fc7d368deae0",
+        "TS": "2026-04-21T17:22:23.923Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "OBSERVADOR",
+        "NOMBRE": "JUANA ZAMORA MATA",
+        "TELEFONO": "4792875526",
+        "DOMICILIO": "CALLE COLINA DIAMANTE 101, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6318968,
+          21.164928
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "3e83c465-1889-47a0-a84d-47386e2e7406",
+        "TS": "2026-04-21T17:23:12.115Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "MARIA GUADALUPE GUZMAN VERA",
+        "TELEFONO": "4798413984",
+        "DOMICILIO": "CALLE COLINA DIAMANTE 119, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6311696,
+          21.1654146
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "8e10f594-d12a-49a6-8d45-f8f939635439",
+        "TS": "2026-04-21T17:23:34.852Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "MARIA GUADALUPE GUZMAN VERA",
+        "TELEFONO": "4798413984",
+        "DOMICILIO": "CALLE COLINA DIAMANTE 119, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6311696,
+          21.1654146
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "22adbb44-0a2f-4ceb-991e-feca7793959c",
+        "TS": "2026-04-21T17:24:22.336Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "ADVERSARIO",
+        "NOMBRE": "MARIA DEL ROSARIO FUENTES HERNANDEZ",
+        "TELEFONO": "4798413984",
+        "DOMICILIO": "CALLE COLINA AGATA  120, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6320539,
+          21.1631034
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "90645af6-9536-44ee-ad49-a48400715910",
+        "TS": "2026-04-21T17:25:21.117Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "ALDO RUIZ GUZMAN",
+        "TELEFONO": "4778794561",
+        "DOMICILIO": "CALLE COLINA  TURMALINA 115A, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6319271,
+          21.1640996
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "436b65a7-805c-4d3f-8cc3-62b076ce3ca9",
+        "TS": "2026-04-21T17:26:17.680Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "RICARDO FUENTES PEREZ",
+        "TELEFONO": "4794561984",
+        "DOMICILIO": "CALLE COLINA  TURMALINA 102, COLINAS DE PLATA, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
       },
       "geometry": {
         "type": "Point",
@@ -60,70 +984,14 @@
     {
       "type": "Feature",
       "properties": {
-        "ID": "118d3af8-e277-415f-a312-0ce752109e66",
-        "TS": "2025-10-29T03:19:33.054Z",
-        "ORIGEN": "CT-27",
-        "ESTATUS": "ACTIVO",
-        "TIPO": "LIDER",
-        "NOMBRE": "HUMBERTO CARBAJAL",
-        "TELEFONO": "4793264589",
-        "DOMICILIO": "CALLE DEL ONIX 102 LEON",
-        "PROMOTOR_PIN": "2701",
-        "SECCION": "1481",
-        "DISTRITO_L": "3",
-        "DISTRITO_F": "3",
-        "MUNICIPIO": "20",
-        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
-        "AMBITO": "MUN:20 · DL:3 · DF:3",
-        "OBS": ""
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -101.6317161,
-          21.1629508
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "ID": "06c46c04-d10a-4805-8b76-8c5f5d6f0d97",
-        "TS": "2025-10-29T03:21:13.576Z",
-        "ORIGEN": "CT-27",
-        "ESTATUS": "ACTIVO",
-        "TIPO": "LIDER",
-        "NOMBRE": "LUIS EDUARDO SANCHEZ",
-        "TELEFONO": "4776492317",
-        "DOMICILIO": "COLINA AGATA 106A LEON",
-        "PROMOTOR_PIN": "2701",
-        "SECCION": "1481",
-        "DISTRITO_L": "3",
-        "DISTRITO_F": "3",
-        "MUNICIPIO": "20",
-        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
-        "AMBITO": "MUN:20 · DL:3 · DF:3",
-        "OBS": ""
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -101.6325807,
-          21.1636183
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "ID": "9d85711f-7bb7-4d5f-8734-948d09263a68",
-        "TS": "2025-10-29T03:23:57.188Z",
+        "ID": "1adf381b-d79c-4618-b159-e533048cd024",
+        "TS": "2026-04-21T17:27:18.592Z",
         "ORIGEN": "CT-27",
         "ESTATUS": "ACTIVO",
         "TIPO": "REP_CASILLA",
-        "NOMBRE": "ANA PEREZ SANCHEZ",
-        "TELEFONO": "4791341165",
-        "DOMICILIO": "COLINA JADE 127 LEON",
+        "NOMBRE": "VERONICA ANDRADE SERRANO",
+        "TELEFONO": "4771234568",
+        "DOMICILIO": "CALLE COLINA  GRANATE 102, COLINAS DE PLATA, LEON, GUANAJUATO",
         "PROMOTOR_PIN": "2701",
         "SECCION": "1481",
         "DISTRITO_L": "3",
@@ -131,27 +999,27 @@
         "MUNICIPIO": "20",
         "MUNICIPIO_NOMBRE": "Leon de los Aldama",
         "AMBITO": "MUN:20 · DL:3 · DF:3",
-        "OBS": ""
+        "OBS": "CONOCE A VARIOS VECINOS"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -101.631229,
-          21.1636789
+          -101.6320032,
+          21.1632152
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "ID": "33168256-6917-43ca-878d-2c783837bcb8",
-        "TS": "2025-10-29T03:25:26.275Z",
+        "ID": "e9617c86-f9a6-4907-95a3-1240f78e8fd6",
+        "TS": "2026-04-21T17:28:44.161Z",
         "ORIGEN": "CT-27",
         "ESTATUS": "ACTIVO",
-        "TIPO": "ADVERSARIO",
-        "NOMBRE": "MARIA CEDILLO LOPEZ",
-        "TELEFONO": "4794789162",
-        "DOMICILIO": "COLINA CUARZO 220 LEON",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "VERONNICA MACIAS LOPEZ",
+        "TELEFONO": "4779126465",
+        "DOMICILIO": "CALLE COLINA  GRANATE 115A, COLINAS DE PLATA, LEON, GUANAJUATO",
         "PROMOTOR_PIN": "2701",
         "SECCION": "1481",
         "DISTRITO_L": "3",
@@ -159,27 +1027,27 @@
         "MUNICIPIO": "20",
         "MUNICIPIO_NOMBRE": "Leon de los Aldama",
         "AMBITO": "MUN:20 · DL:3 · DF:3",
-        "OBS": ""
+        "OBS": "CONOCE A VARIOS VECINOS"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -101.6321011,
-          21.1658247
+          -101.6316783,
+          21.1637809
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "ID": "959fc346-057c-4f82-9a03-6fe14958f72a",
-        "TS": "2025-10-29T03:26:35.330Z",
+        "ID": "0ca31b77-dce8-4d25-ab8e-e1a08e2ba746",
+        "TS": "2026-04-21T17:30:25.143Z",
         "ORIGEN": "CT-27",
         "ESTATUS": "ACTIVO",
-        "TIPO": "REP_CASILLA",
-        "NOMBRE": "ARMANDO MUÑOZ",
-        "TELEFONO": "4792569317",
-        "DOMICILIO": "COLINA TOPACIO 210 LEON",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "LUIS HERNANDEZ CAMPOS",
+        "TELEFONO": "4797945612",
+        "DOMICILIO": "CALLE DEL ONIX 115, COLINAS DE PLATA, LEON, GUANAJUATO",
         "PROMOTOR_PIN": "2701",
         "SECCION": "1481",
         "DISTRITO_L": "3",
@@ -187,27 +1055,27 @@
         "MUNICIPIO": "20",
         "MUNICIPIO_NOMBRE": "Leon de los Aldama",
         "AMBITO": "MUN:20 · DL:3 · DF:3",
-        "OBS": ""
+        "OBS": "CONOCE A VARIOS VECINOS, APOYARIA EL DIA D A MOVILIZAR"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -101.6311124,
-          21.1672597
+          -101.6314135,
+          21.1634649
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "ID": "d265a5db-9e76-464f-bbdd-85969b2932dd",
-        "TS": "2025-10-29T03:28:31.212Z",
+        "ID": "9179a2ee-d46f-47ec-8e63-c219404a3cb1",
+        "TS": "2026-04-21T17:33:56.699Z",
         "ORIGEN": "CT-27",
         "ESTATUS": "ACTIVO",
-        "TIPO": "REP_GENERAL",
-        "NOMBRE": "ROSA OLMOS",
-        "TELEFONO": "4795874125",
-        "DOMICILIO": "COLINA VENTURINA 120A LEON",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "EUSEBIO LARA RICA",
+        "TELEFONO": "4773216958",
+        "DOMICILIO": "ANDADOR CREDITO 230, CAJA POPULAR COECILLO, LEON, GUANAJUATO",
         "PROMOTOR_PIN": "2701",
         "SECCION": "1481",
         "DISTRITO_L": "3",
@@ -215,55 +1083,27 @@
         "MUNICIPIO": "20",
         "MUNICIPIO_NOMBRE": "Leon de los Aldama",
         "AMBITO": "MUN:20 · DL:3 · DF:3",
-        "OBS": ""
+        "OBS": "NO LE GUSTA EL PARTIDO ACTUAL EN EL PODER"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -101.6318667,
-          21.1681598
+          -101.645383,
+          21.1659704
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "ID": "ee05b1de-55b3-4758-aa1c-4fc47afe7761",
-        "TS": "2025-10-29T03:29:40.332Z",
-        "ORIGEN": "CT-27",
-        "ESTATUS": "ACTIVO",
-        "TIPO": "REP_GENERAL",
-        "NOMBRE": "MARIA ELENA GUTIERREZ",
-        "TELEFONO": "4793257894",
-        "DOMICILIO": "COLINA ZAFIRO 112 LEON",
-        "PROMOTOR_PIN": "2701",
-        "SECCION": "1481",
-        "DISTRITO_L": "3",
-        "DISTRITO_F": "3",
-        "MUNICIPIO": "20",
-        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
-        "AMBITO": "MUN:20 · DL:3 · DF:3",
-        "OBS": ""
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -101.6307901,
-          21.167678
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "ID": "ae6e079b-e6e9-4d5e-9b47-c8aedfb42230",
-        "TS": "2025-10-29T03:30:39.531Z",
+        "ID": "52e91e99-c232-4aa5-9570-645c04b9297d",
+        "TS": "2026-04-21T17:34:38.626Z",
         "ORIGEN": "CT-27",
         "ESTATUS": "ACTIVO",
         "TIPO": "OBSERVADOR",
-        "NOMBRE": "JULIA MATA",
-        "TELEFONO": "4772198564",
-        "DOMICILIO": "COLINA OPALO 140 LEON",
+        "NOMBRE": "MIRIAM HERNANDEZ LOPEZ",
+        "TELEFONO": "4797491589",
+        "DOMICILIO": "ANDADOR CREDITO 102, CAJA POPULAR COECILLO, LEON, GUANAJUATO",
         "PROMOTOR_PIN": "2701",
         "SECCION": "1481",
         "DISTRITO_L": "3",
@@ -271,13 +1111,153 @@
         "MUNICIPIO": "20",
         "MUNICIPIO_NOMBRE": "Leon de los Aldama",
         "AMBITO": "MUN:20 · DL:3 · DF:3",
-        "OBS": ""
+        "OBS": "NO LE GUSTA EL PARTIDO ACTUAL EN EL PODER"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          -101.6307859,
-          21.1659755
+          -101.6456074,
+          21.163869
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "fb698b2b-ad16-4c1d-b66a-dee63adf48ee",
+        "TS": "2026-04-21T17:35:59.782Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "LIDER",
+        "NOMBRE": "ALICIA GALLEGOS MORA",
+        "TELEFONO": "4776279674",
+        "DOMICILIO": "CALLE VIVIENDA COOPERATIVA 203, CAJA POPULAR COECILLO, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "NO LE GUSTA EL PARTIDO ACTUAL EN EL PODER"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6451785,
+          21.1650044
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "d507026f-bb34-4d20-a77f-df5a4b4e5f63",
+        "TS": "2026-04-21T17:37:27.447Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "ROBERTO RAMIREZ RAMIREZ",
+        "TELEFONO": "4797156457",
+        "DOMICILIO": "CALLE PEDRO VELAZQUEZ 403, CAJA POPULAR COECILLO, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6449324,
+          21.1637895
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "02560134-fd86-40d9-9a11-9bcf4f5fcf91",
+        "TS": "2026-04-21T17:39:23.081Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "LEON BUENO RAMIREZ",
+        "TELEFONO": "4771798562",
+        "DOMICILIO": "ANDADOR ACCION COOPERATIVA 112, CAJA POPULAR COECILLO, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6439312,
+          21.1650959
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "d358f613-8b66-471f-bb2e-aba7d2769197",
+        "TS": "2026-04-21T17:40:11.453Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "JUANA MENDOZA ROMERO",
+        "TELEFONO": "4799746313",
+        "DOMICILIO": "ANDADOR ACCION COOPERATIVA 129, CAJA POPULAR COECILLO, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "CONOCE A VARIOS VECINOS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6439649,
+          21.1657994
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ID": "ff40311a-8ca0-4b91-b403-d3e9e2fdae8f",
+        "TS": "2026-04-21T17:41:34.874Z",
+        "ORIGEN": "CT-27",
+        "ESTATUS": "ACTIVO",
+        "TIPO": "SIMPATIZANTE",
+        "NOMBRE": "LAURA DEL ROCIO MENA MENA",
+        "TELEFONO": "4771119846",
+        "DOMICILIO": "ANDADOR CAJAS POPULARES GUAMICH 120, CAJA POPULAR COECILLO, LEON, GUANAJUATO",
+        "PROMOTOR_PIN": "2701",
+        "SECCION": "1481",
+        "DISTRITO_L": "3",
+        "DISTRITO_F": "3",
+        "MUNICIPIO": "20",
+        "MUNICIPIO_NOMBRE": "Leon de los Aldama",
+        "AMBITO": "MUN:20 · DL:3 · DF:3",
+        "OBS": "NO APOYARIA EN CAMPO, SOLO CON VOTO"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -101.6433295,
+          21.1641446
         ]
       }
     }

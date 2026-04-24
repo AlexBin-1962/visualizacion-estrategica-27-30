@@ -1,0 +1,302 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ganar Todo</title>
+    <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+      <link rel="stylesheet" href="ganar_todo.css"/>
+  </head>
+  <body>
+    <div id="gt-layout">
+    <div id="panel-lateral">
+      <div id="panel-header">
+        <!-- <img src="../assets/img/logo.png" alt="Logo"/> -->
+        <span>Ganar Todo</span>
+      </div>
+      <!-- Aquí va el contenido del panel lateral -->
+
+      <!-- Buscador de secciones -->
+      <div
+        id="sec-search"
+        style="
+          padding: 10px 12px;
+          border-top: 1px solid #cbd5e1;
+          background: #eef2f7;
+        "
+      >
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input
+            id="sec-q"
+            type="text"
+            placeholder="Buscar sección (ej. 1234 o '1234 León')"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="search"
+            style="
+              flex: 1;
+              padding: 6px 8px;
+              border: 1px solid #94a3b8;
+              border-radius: 6px;
+            "
+          />
+          <label style="white-space: nowrap; font-size: 12px">
+            <input id="sec-global" type="checkbox" /> Todo el estado
+          </label>
+        </div>
+        <ul
+          id="sec-suggest"
+          style="
+            margin: 8px 0 0 0;
+            padding: 0;
+            list-style: none;
+            max-height: 180px;
+            overflow: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            display: none;
+          "
+        ></ul>
+      </div>
+
+      <!-- Panel flotante de info de sección -->
+
+      <div
+        id="mini-universe"
+        style="
+          padding: 12px 12px 6px 12px;
+          background: #eef2f7;
+          border-top: 1px solid #cbd5e1;
+        "
+      >
+        <div class="row" style="margin-bottom: 8px">
+          <label
+            ><input type="checkbox" id="mini-all-state" /> Estado
+            completo</label
+          >
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Municipio</label>
+          <select id="mini-sel-mun" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Federal</label>
+          <select id="mini-sel-df" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Local</label>
+          <select id="mini-sel-dl" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="hint" style="font-size: 12px; color: #64748b">
+          Elige solo uno. Al cambiar, el mapa se actualiza.
+        </div>
+      </div>
+
+      <div id="top-toolbar" class="ttb">
+        <div class="ttb-wrap">
+          <button
+            id="btn-gt-part"
+            class="ttb-btn"
+            title="Participación 21/24/27*"
+            type="button"
+          >
+            <span class="ico">🗳️</span><span class="txt">Part. 21/24/27*</span>
+          </button>
+
+          <button
+            id="btn-estabilidad"
+            class="ttb-btn"
+            title="Estabilidad 2018–2024"
+            type="button"
+          >
+            <span class="ico">🧭</span><span class="txt">Estabilidad 18–24</span>
+          </button>
+
+          <button
+            id="btn-gt-metas"
+            class="ttb-btn"
+            title="Metas de participación 2027*"
+            type="button"
+          >
+            <span class="ico">🎯</span><span class="txt">Meta 2027*</span>
+          </button>
+
+          <button
+            id="btn-gt-ganar"
+            class="ttb-btn"
+            title="¿Qué se requiere para ganar todo?"
+            type="button"
+          >
+            <span class="ico">🏆</span><span class="txt">Ganar todo</span>
+          </button>
+
+          <button
+            id="btn-recentrar"
+            class="ttb-btn"
+            title="Recentrar universo (R)"
+            type="button"
+          >
+            Recentrar
+          </button>
+
+          <button
+            id="btn-prob-volteo"
+            class="ttb-btn"
+            title="Probabilidad de voltear 2027"
+          >
+            Voltear 2027
+          </button>
+
+          <button
+            id="btn-plan-mayoria"
+            class="ttb-btn"
+            title="Mínimo de votos para mayoría"
+          >
+            Plan mayoría
+          </button>
+
+          <button
+            id="btn-eficiencia-voto"
+            class="ttb-btn"
+            title="Eficiencia del voto (votos ociosos)"
+          >
+            Eficiencia voto
+          </button>
+
+          <button
+            id="btn-corredores-volteo"
+            class="ttb-btn"
+            title="Corredores de volteo (clusters)"
+          >
+            Corredores
+          </button>
+
+          <button
+            id="btn-alertas-riesgo"
+            class="ttb-btn"
+            title="Alertas de riesgo (bastiones en caída)"
+          >
+            Alertas
+          </button>
+
+          <button
+            id="btn-simulador-impulso"
+            class="ttb-btn"
+            title="Simulador de impulso"
+          >
+            Impulso
+          </button>
+
+          <button
+            id="btn-brecha"
+            class="ttb-btn"
+            title="Mapa de brecha (pp / votos)"
+          >
+            Brecha pp/votos
+          </button>
+
+          <button
+            id="btn-sensibilidad-participacion"
+            class="ttb-btn"
+            title="Sensibilidad a participación (±pp)"
+          >
+            Sensibilidad p%
+          </button>
+
+          <div class="ttb-sep"></div>
+
+          <button
+            id="btn-ayuda"
+            class="ttb-btn ttb-help"
+            title="Ayuda (?)"
+            type="button"
+          >
+            <span class="ico">❓</span><span class="txt">Ayuda</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="map-wrap">
+      <div id="map"></div>
+    </div>
+
+    <div id="gt-dashboard">
+      <div id="dash-panels">
+        <div id="sec-info">
+          <div class="hdr">
+            <span class="ttl">Sección</span>
+            <button id="sec-close" class="btn-close" aria-label="Cerrar">×</button>
+          </div>
+          <div class="body">
+            <div class="row">
+              <span class="k">Sección</span> <span class="v" id="si-sec">—</span>
+            </div>
+            <div class="row">
+              <span class="k">Distrito Federal</span
+              ><span class="v" id="si-df">—</span>
+            </div>
+            <div class="row">
+              <span class="k">Distrito Local</span>
+              <span class="v" id="si-dl">—</span>
+            </div>
+            <div class="row">
+              <span class="k">LN (2024)</span> <span class="v" id="si-ln">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- === SCRIPT ÚNICO === -->
+    <script src="ganar_todo.js"></script>
+    
+
+    
+
+    
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+  </body>
+</html>

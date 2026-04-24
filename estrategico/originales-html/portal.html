@@ -1,0 +1,1448 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AT · Portal</title>
+  <link rel="stylesheet" href="assets/css/base.css"/>
+  <link rel="icon" type="image/svg+xml" href="assets/logo-at.svg">
+  <link rel="alternate icon" href="assets/logo-at.svg">
+
+  <!-- ===================== -->
+  <!-- Estilos internos CSS -->
+  <!-- ===================== -->
+  <style>
+ :root{
+  --azul:#4A90E2; --azul-osc:#2B6CB0;
+  --gris-suave:#F3F6FB; --borde-suave:#E6ECF5;
+  --side-left-top: 34px;   /* ↩︎ altura desde el top (ajústala) */
+  --side-left-gap: 86px;   /* ↩︎ margen desde el borde izquierdo */
+  --stroke: #e6eaf2;
+  --muted: #5f6b82;
+  --primary: #2563eb; /* Azul principal */
+  --accent: #3b82f6;  /* Azul acento */
+  --bg: #f4f6fb;     /* Fondo página gris claro */
+  --card-bg: #fff;   /* Fondo tarjetas blanco */
+  --shadow: 0 10px 36px rgba(0,0,0,.08);
+  --radius: 18px;
+  --transition: 0.2s cubic-bezier(.4,0,.2,1);
+  --side-right-top: 84px;     /* altura desde arriba */
+  --side-right-gap: 16px;     /* separación del borde derecho */
+  --sr-bg: #ffffff;
+  --sr-text: #2A3345;
+  --sr-muted: #6B7280;
+  --sr-chip: #EEF3FA;
+}
+
+/* Lateral izquierdo fijo, pegado arriba */
+
+.side-left, .brand-card {overflow: visible;}
+
+.side-left{
+  position: fixed;
+  left: var(--side-left-gap);
+  top: var(--side-left-top);         /* ⬅️ súbelo/bájalo con esta variable */
+  width: clamp(120px, 12vw, 220px);  /* responsivo */
+  z-index: 5;                        /* por encima del fondo, debajo de modales */
+  pointer-events: none;
+}
+
+/* Tarjeta del logo: compacta y sin recorte */
+.brand-card{
+  position: relative;
+  pointer-events: auto;
+  width: 100%;
+  max-width: 200px;                  /* evita que crezca de más */
+  background: #fff;                  /* más contraste que el gris suave */
+  border: 1px solid var(--borde-suave);
+  border-radius: 20px;
+  box-shadow: 0 10px 24px rgba(20,40,80,.08);
+  padding: 12px;
+}
+
+/* Si tu UI mete decoraciones con ::before/::after, las apagamos aquí */
+.brand-card::before,
+.brand-card::after{
+  content: none !important;
+}
+
+/* SVG responsivo y visible (sin cortes) */
+.brand-mark{
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.brand-img{
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:200px;          /* límite alto */
+  object-fit:contain;        /* 🔒 jamás recorta */
+}
+
+/* Por si algún wrapper global recorta */
+.layout, main, #app { overflow: visible; }
+
+
+
+/* Si algún contenedor global tiene overflow:hidden, evita recortes */
+body, html { overflow-x: hidden; }
+
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+      background: var(--bg);
+      color: #222;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px 20px 24px;
+      margin-bottom: 24px;
+      transition: box-shadow var(--transition);
+    }
+    .card:hover {
+      box-shadow: 0 16px 48px rgba(0,0,0,.12);
+    }
+    h2 {
+      margin: 0 0 1.2rem 0;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.5px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12,1fr);
+      gap: 18px;
+    }
+    .row {
+      grid-column: span 12;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    @media(min-width:860px){ .row.span4{grid-column:span 4} .row.span6{grid-column:span 6} }
+    label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    select, input {
+      padding: 12px;
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      font-size: 15px;
+      background: #f3f6fa;
+      transition: border-color var(--transition);
+    }
+    select:focus, input:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+    .hint {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    .btn {
+      background: var(--card-bg);
+      cursor: pointer;
+      box-shadow: 0 6px 24px rgba(0,0,0,.07);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      padding: 10px 22px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--primary);
+      transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+    }
+    .btn:hover {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 8px 32px rgba(59,130,246,.15);
+    }
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .primary:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+    /* Módulos */
+    .modgrid {
+      display: grid;
+      grid-template-columns: repeat(12,1fr);
+      gap: 20px;
+      margin-top: 28px;
+    }
+    .modcard {
+      grid-column: span 12;
+      background: var(--card-bg);
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      padding: 22px 18px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 8px 32px rgba(0,0,0,.09);
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .modcard:hover {
+      box-shadow: 0 16px 48px rgba(33,208,122,.12);
+      transform: translateY(-2px) scale(1.01);
+    }
+    @media(min-width:760px){.modcard{grid-column:span 6}} @media(min-width:1040px){.modcard{grid-column:span 4}}
+    .modhead {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .modico {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,.10);
+    }
+    .i-analisis{background:#0eb4ff}
+    .i-ganar{background:#21d07a}
+    .i-campo{background:#4a90e2}
+    .i-estr{background:#f59e0b}
+    .i-diad{background:#a78bfa}
+    .modtitle {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary);
+    }
+    .moddesc {
+      font-size: 14px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .modcard.disabled {
+      opacity: .45;
+      filter: grayscale(.08);
+      pointer-events: none;
+    }
+    .mod-btn[disabled]{opacity:.5;cursor:not-allowed}
+    .disabled{opacity:.6;pointer-events:none}
+
+      /* ====== Panel derecho fijo ====== */
+      .side-right.sr-panel{
+        position: fixed;
+        right: var(--side-right-gap);
+        top: var(--side-right-top);
+        width: clamp(240px, 18vw, 360px);
+        z-index: 6;
+        pointer-events: none; /* no bloquea clics fuera del panel */
+      }
+
+      /* ====== Tarjeta interna (recibe interacción) ====== */
+      .sr-card{
+        pointer-events: auto;
+        position: relative;
+        background: var(--sr-bg);
+        border: 1px solid var(--borde-suave);
+        border-radius: 20px;
+        box-shadow: 0 12px 28px rgba(20,40,80,.10);
+        padding: 16px 16px 14px;
+        color: var(--sr-text);
+        overflow: hidden;
+      }
+
+      /* Decoración suave en fondo */
+      .sr-card::after{
+        content:"";
+        position:absolute; inset:-40% -40% auto auto;
+        width: 220px; height: 220px; border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(74,144,226,.15), transparent 70%);
+        pointer-events:none;
+      }
+
+      /* ====== Header ====== */
+      .sr-header{
+        display:flex; align-items:center; gap:12px; margin-bottom:10px;
+      }
+
+      .sr-miniMark{
+        width:36px; height:36px; border-radius:12px;
+        background: var(--gris-suave);
+        display:grid; place-items:center; overflow:hidden;
+        border:1px solid var(--borde-suave);
+      }
+
+      .sr-miniMark svg{ width:28px; height:28px; display:block; }
+
+      .sr-headings h3{
+        margin:0; font-size: clamp(16px,1.5vw,20px); color: var(--azul-osc); letter-spacing:.2px;
+      }
+      .sr-headings p{
+        margin:2px 0 0; font-size: 12.5px; color: var(--sr-muted);
+      }
+
+      /* ====== Badges ====== */
+      .sr-badges{
+        display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;
+      }
+      .sr-badge{
+        background: var(--sr-chip);
+        border:1px solid var(--borde-suave);
+        color: var(--azul-osc);
+        font-weight:600;
+        font-size:12px;
+        padding:6px 8px; border-radius: 999px;
+      }
+
+      /* ====== KPIs ====== */
+      .sr-kpis{
+        display:grid; grid-template-columns: repeat(3,1fr); gap:8px; margin-bottom:12px;
+      }
+      .sr-kpi{
+        background:#FAFBFE; border:1px solid var(--borde-suave);
+        border-radius:12px; padding:8px;
+        display:grid; gap:4px; text-align:center;
+      }
+      .sr-kpi-label{ font-size:11px; color:#64748B; line-height:1.1; }
+      .sr-kpi-value{ font-size:16px; font-weight:800; color: var(--azul); }
+
+      /* ====== Progreso ====== */
+      .sr-progress{
+        display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px; margin-bottom:10px;
+      }
+      .sr-prog-label{ font-size:12px; color:#64748B; }
+      .sr-prog-num{ font-size:12px; font-weight:700; color: var(--azul-osc); }
+      .sr-prog-bar{
+        height:8px; background:#EEF2F7; border-radius:999px; overflow:hidden; border:1px solid var(--borde-suave);
+      }
+      .sr-prog-bar i{
+        display:block; height:100%; background: linear-gradient(90deg,#4A90E2,#2B6CB0);
+        border-radius:999px; box-shadow: 0 1px 0 rgba(0,0,0,.06) inset;
+      }
+
+      /* ====== Tips rotativos (CSS puro) ====== */
+      .sr-tips{ position:relative; min-height:22px; margin-bottom:12px; padding-top:4px; }
+      .sr-tip{
+        position:absolute; left:0; right:0;
+        opacity:0; transform: translateY(6px);
+        color: var(--azul); font-weight:600; font-size:13px;
+        animation: srRotate 12s infinite;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .sr-tip:nth-child(1){ animation-delay:0s; }
+      .sr-tip:nth-child(2){ animation-delay:4s; }
+      .sr-tip:nth-child(3){ animation-delay:8s; }
+      @keyframes srRotate{
+        0%{opacity:0;transform:translateY(6px)}
+        8%{opacity:1;transform:translateY(0)}
+        28%{opacity:1;transform:translateY(0)}
+        33%{opacity:0;transform:translateY(-6px)}
+        100%{opacity:0}
+      }
+
+      /* ====== CTA ====== */
+      .sr-cta{
+        display:inline-flex; align-items:center; justify-content:center;
+        gap:8px; padding:10px 12px; border-radius:12px;
+        background: linear-gradient(90deg,#4A90E2,#2B6CB0);
+        color:#fff; text-decoration:none; font-weight:700; font-size:13px;
+        box-shadow: 0 6px 16px rgba(42,74,120,.25);
+        transition: transform .12s ease, box-shadow .12s ease;
+      }
+      .sr-cta:hover{ transform: translateY(-1px); box-shadow: 0 10px 20px rgba(42,74,120,.25); }
+
+      /* ====== Toggle (pestaña pegada al borde) ====== */
+      .sr-toggle{
+        position:absolute; right: calc(100% + 8px); top:12px;
+        width:36px; height:36px; border-radius:12px;
+        background:#ffffff; color: var(--azul-osc);
+        border:1px solid var(--borde-suave);
+        box-shadow:0 8px 18px rgba(20,40,80,.10);
+        display:grid; place-items:center; cursor:pointer;
+      }
+      .sr-toggle:focus{ outline:2px solid #C7DBFF; outline-offset:2px; }
+
+      /* Estados abierto/cerrado */
+      .side-right.sr-closed .sr-card{ transform: translateX(8px); opacity:0; pointer-events:none; }
+      .side-right.sr-closed{ right: -6px; } /* se guarda casi fuera de pantalla */
+      .side-right.sr-closed .sr-toggle{
+        transform: rotate(180deg);
+      }
+
+      /* Responsivo: en pantallas medianas/pequeñas mostrar cerrado por defecto */
+      @media (max-width: 1200px){
+        .side-right.sr-panel{ width: clamp(220px, 28vw, 320px); }
+      }
+      @media (max-width: 1024px){
+        .side-right.sr-panel{ right: 6px; }
+      }
+      @media (max-width: 900px){
+        .side-right.sr-panel{ display:none; } /* si prefieres ocúltalo en mobile */
+      }
+
+      /* ===== Modal base ===== */
+      .sr-modal{
+        position: fixed; inset: 0; z-index: 999;
+        display: grid; place-items: center;
+        visibility: hidden; opacity: 0;
+        transition: opacity .18s ease, visibility .18s ease;
+      }
+      .sr-modal.is-open{ visibility: visible; opacity: 1; }
+
+      .sr-modal__backdrop{
+        position: absolute; inset: 0;
+        background: rgba(21,31,50,.42);
+        backdrop-filter: blur(2px);
+      }
+
+      .sr-modal__dialog{
+        position: relative;
+        width: min(720px, 92vw);
+        background: #fff;
+        border: 1px solid var(--borde-suave);
+        border-radius: 20px;
+        box-shadow: 0 24px 48px rgba(18,38,80,.25);
+        padding: 18px 18px 16px;
+        transform: translateY(12px) scale(.98);
+        opacity: 0;
+        transition: transform .22s ease, opacity .22s ease;
+      }
+      .sr-modal.is-open .sr-modal__dialog{
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+
+      /* Header / texto */
+      #sr-modal-title{
+        margin: 4px 28px 8px 0;
+        font-size: clamp(18px, 2.2vw, 22px);
+        color: var(--azul-osc);
+      }
+      .sr-modal__lead{
+        margin: 0 0 12px; color: #4b5563;
+      }
+
+      /* Lista de pasos */
+      .sr-modal__list{
+        margin: 0 0 12px 18px; padding: 0;
+        display: grid; gap: 8px; color: #2A3345;
+      }
+      .sr-modal__list li strong{ color: var(--azul); }
+
+      /* Chips / tips */
+      .sr-modal__chips{
+        display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 14px;
+      }
+      .chip{
+        background: #EEF3FA; border: 1px solid var(--borde-suave);
+        color: var(--azul-osc); border-radius: 999px;
+        font-size: 12px; font-weight: 600; padding: 6px 10px;
+      }
+
+      /* Footer */
+      .sr-modal__footer{ display: flex; justify-content: flex-end; gap: 8px; }
+      .sr-btn{
+        border: 1px solid var(--borde-suave);
+        background: #fff; color: var(--sr-text);
+        padding: 10px 12px; border-radius: 12px; font-weight: 700; cursor: pointer;
+      }
+      .sr-btn--primary{
+        background: linear-gradient(90deg,#4A90E2,#2B6CB0);
+        color: #fff; border: none;
+        box-shadow: 0 6px 16px rgba(42,74,120,.25);
+      }
+
+      /* Cerrar */
+      .sr-modal__close{
+        position: absolute; top: 12px; right: 12px;
+        width: 36px; height: 36px; border-radius: 12px;
+        border: 1px solid var(--borde-suave); background: #fff; color: #334155;
+        display: grid; place-items: center; cursor: pointer;
+      }
+
+      /* Accesibilidad visual en focus */
+      .sr-modal__close:focus, .sr-btn:focus{
+        outline: 2px solid #C7DBFF; outline-offset: 2px;
+      }
+
+      /* Responsivo */
+      @media (max-width: 520px){
+        .sr-modal__dialog{ padding: 16px 14px 14px; }
+      }
+
+      .btn-manual{
+        position: fixed;
+        left: 18px;
+        bottom: 18px;
+        z-index: 900; /* debajo del modal (999), arriba del portal */
+        border: 1px solid var(--borde-suave);
+        background: #fff;
+        color: var(--azul-osc);
+        padding: 10px 12px;
+        border-radius: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 10px 22px rgba(18,38,80,.12);
+      }
+      .btn-manual:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 14px 26px rgba(18,38,80,.18);
+      }
+
+
+      /* Botón flotante */
+      .preso-btn{
+        position: fixed; right: 16px; bottom: 18px; z-index: 90;
+        width: 44px; height: 44px; border-radius: 14px;
+        border: 1px solid var(--borde-suave); background:#fff; color: var(--azul-osc);
+        display: grid; place-items: center; cursor: pointer;
+        box-shadow: 0 10px 22px rgba(20,40,80,.12);
+        transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+      }
+      .preso-btn:hover{ transform: translateY(-1px); box-shadow:0 14px 26px rgba(20,40,80,.16); }
+
+      /* Modo presentación: limpia laterales y deja el centro despejado */
+      .presentation-mode .side-left,
+      .presentation-mode .sr-panel{ display: none !important; }
+
+
+      @media print{
+      /* Oculta elementos no esenciales */
+      .side-left, .sr-panel, .preso-btn { display: none !important; }
+
+      /* Quita sombras/bordes muy marcados para que no “ensucien” el PDF */
+      * { box-shadow: none !important; }
+
+      /* Si tu contenedor principal tiene ancho limitado, dale aire */
+      body { background: #fff !important; }
+    }
+
+    .manual-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 9999;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .manual-panel {
+      width: 420px;
+      max-width: 90%;
+      height: 100%;
+      background: #ffffff;
+      box-shadow: -6px 0 20px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .manual-header {
+      padding: 14px 16px;
+      background: #2b2b2b;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .manual-header h2 {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .manual-header button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .manual-content {
+      padding: 16px;
+      overflow-y: auto;
+      font-size: 14px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #manualATModal.hidden + .manual-index {
+      display: none;
+    }
+
+
+
+
+  </style>
+</head>
+<body>
+
+    <!-- LADO IZQUIERDO: LOGO RESPONSIVO -->
+      <aside class="side-left" aria-label="Identidad de la APP">
+        <div class="brand-card">
+          <img class="brand-img" src="assets/logo-at.svg" alt="Logo AT Análisis Estratégico">
+        </div>
+      
+
+          <defs>
+            <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#4A90E2"/>
+              <stop offset="1" stop-color="#2B6CB0"/>
+            </linearGradient>
+          </defs>
+          <!-- Círculo exterior -->
+          <circle cx="100" cy="100" r="92" fill="none" stroke="url(#g1)" stroke-width="12"/>
+          <!-- Divisiones (3 módulos) -->
+          <path d="M100 100 L100 12" stroke="#4A90E2" stroke-width="10" stroke-linecap="round"/>
+          <path d="M100 100 L27 170" stroke="#4A90E2" stroke-width="10" stroke-linecap="round"/>
+          <path d="M100 100 L173 170" stroke="#4A90E2" stroke-width="10" stroke-linecap="round"/>
+          <!-- Rellenos suaves de los 3 sectores -->
+          <path d="M100 12 A88 88 0 0 1 173 170 L100 100 Z" fill="#EEF3FA"/>
+          <path d="M27 170 A88 88 0 0 1 100 12 L100 100 Z" fill="#E9EEF5"/>
+          <path d="M173 170 A88 88 0 0 1 27 170 L100 100 Z" fill="#F3F6FB"/>
+
+          <!-- ICONO 1: MAPA (Análisis Territorial) -->
+          <path d="M138 58 l12 6 -6 10 8 7 -10 8 -9 -5 -8 5 -9 -7 7 -9 -5 -10 10 -7 10 2z"
+                fill="#4A90E2" opacity="0.9"/>
+
+          <!-- ICONO 2: FLECHA ASCENDENTE (Ganar Todo) -->
+          <path d="M105 105 L160 150" stroke="#2B6CB0" stroke-width="10" stroke-linecap="round"/>
+          <polygon points="160,150 148,148 156,138" fill="#2B6CB0"/>
+
+          <!-- ICONO 3: PERSONA + CHECK (Campo) -->
+          <circle cx="70" cy="132" r="12" fill="#4A90E2"/>
+          <path d="M56 160 q14 -12 28 0 v10 h-28z" fill="#4A90E2"/>
+          <path d="M86 152 l8 8 14 -18" fill="none" stroke="#2B6CB0" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </aside>
+
+    <!-- LADO DERECHO: PANEL ESTRATÉGICO -->
+    <aside id="sr-panel" class="side-right sr-panel" aria-label="Descripción del proyecto">
+      <!-- Botón toggle (siempre visible) -->
+      <button id="sr-toggle" class="sr-toggle" aria-controls="sr-panel" aria-expanded="true" title="Mostrar/Ocultar info">
+        <!-- ícono flecha -->
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="sr-card" role="region" aria-label="AT Análisis Estratégico 2027">
+        <header class="sr-header">
+          <div class="sr-miniMark" aria-hidden="true">
+            <!-- minilogo -->
+            <svg viewBox="-8 -8 216 216">
+              <circle cx="100" cy="100" r="92" fill="none" stroke="#4A90E2" stroke-width="12" opacity=".25"/>
+              <path d="M100 100 L100 12 M100 100 L27 170 M100 100 L173 170" stroke="#4A90E2" stroke-width="10" stroke-linecap="round" opacity=".2"/>
+            </svg>
+          </div>
+          <div class="sr-headings">
+            <h3>AT Análisis Estratégico 2027</h3>
+            <p>Datos claros para decisiones de campaña.</p>
+          </div>
+        </header>
+
+      <div class="sr-kpis">
+        <div class="sr-kpi">
+          <span class="sr-kpi-label">Top secciones foco</span>
+          <span id="kpi-top" class="sr-kpi-value">12</span>   <!-- ⬅️ ID -->
+        </div>
+        <div class="sr-kpi">
+          <span class="sr-kpi-label">Margen &lt; 3%</span>
+          <span id="kpi-m3" class="sr-kpi-value">8</span>     <!-- ⬅️ ID -->
+        </div>
+        <div class="sr-kpi">
+          <span class="sr-kpi-label">Abstención alta</span>
+          <span id="kpi-abst" class="sr-kpi-value">15</span>  <!-- ⬅️ ID -->
+        </div>
+      </div>
+
+      <div class="sr-progress">
+          <span class="sr-prog-label">Ruta 2027</span>
+          <div class="sr-prog-bar"><i style="width: 64%"></i></div>
+          <span class="sr-prog-num">64%</span>
+        </div>
+
+        <div class="sr-tips" aria-live="polite">
+          <span class="sr-tip">Prioriza secciones con margen &lt; 3%.</span>
+          <span class="sr-tip">Cruza abstención 2024 vs. crecimiento LN.</span>
+          <span class="sr-tip">DF 2: concentra brigadas en Top-N secciones.</span>
+        </div>
+
+        <a class="sr-cta" href="#" role="button" aria-label="Ver guía rápida">
+          Ver guía rápida
+        </a>
+
+
+      </div>
+    </aside>
+
+
+    <!-- MODAL: GUÍA RÁPIDA -->
+    <div id="sr-modal" class="sr-modal" aria-hidden="true">
+      <div class="sr-modal__backdrop" data-sr-close></div>
+
+      <div class="sr-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="sr-modal-title">
+        <button class="sr-modal__close" type="button" data-sr-close aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+      <div class="sr-view sr-view--quick">
+
+        <h3 id="sr-modal-title">Guía rápida</h3>
+        <p class="sr-modal__lead">Pasos exprés para usar el portal en demo con el DF 2.</p>
+
+        <ol class="sr-modal__list">
+          <li><strong>Selecciona el universo</strong> (elige <em>solo uno</em>): Municipio, Distrito Federal o Distrito Local.</li>
+          <li><strong>Análisis Territorial</strong>: mapas e histórico 2018–2024 para entender tendencia y márgenes.</li>
+          <li><strong>Ganar Todo</strong>: identifica secciones clave por <em>margen &lt; 3%</em>, abstención alta y metas por sección.</li>
+          <li><strong>Campo</strong>: levanta y monitorea reportes del territorio (brigadas, avances, incidencias).</li>
+          <li><strong>Ruta DF 2</strong>: elige <em>DF 2</em> → abre <em>Ganar Todo</em> → vista “¿Qué se requiere para ganar?” → prioriza Top-N secciones.</li>
+        </ol>
+
+        <div class="sr-modal__chips">
+          <span class="chip">Atajo: Ctrl + K (búsqueda)</span>
+          <span class="chip">Tip: exporta capturas para PPT</span>
+          <span class="chip">Tip: revisa abstención 2024</span>
+        </div>
+      </div>
+
+      <div class="sr-view sr-view--manual" hidden>
+        <h3>Manual AT Análisis 27-30</h3>
+
+        <div class="sr-modal__content">
+          <br><br>
+          <h4>Capítulo 1 · Introducción</h4>
+          AT Análisis 27-30 es una plataforma integral...<br><br>
+
+          <h4>Capítulo 2 · Visión General</h4>
+          La app se organiza en módulos...<br><br>
+        </div>
+      </div>
+
+
+      <div class="sr-modal__footer">
+        <button class="sr-btn" type="button" id="btnVerManual">
+          Ver manual completo
+        </button>
+
+        <button class="sr-btn sr-btn--primary" type="button" data-sr-close>
+          Entendido
+        </button>
+      </div>
+
+      </div>
+    </div>
+
+
+
+  <main class="wrap">
+    <!-- =============================== -->
+    <!-- Sección: Filtros de selección  -->
+    <!-- =============================== -->
+    <div class="card">
+      <h2>Selecciona el universo (elige <b>solo uno</b>)</h2>
+
+      <div class="grid">
+          <!-- Filtro: Municipio -->
+          <div class="row span4">
+            <label>Municipio</label>
+            <select id="sel-mun"><option value="">— Ninguno —</option></select>
+          </div>
+          <!-- Filtro: Distrito Federal -->
+          <div class="row span4">
+            <label>Distrito Federal</label>
+            <select id="sel-df"><option value="">— Ninguno —</option></select>
+          </div>
+          <!-- Filtro: Distrito Local -->
+          <div class="row span4">
+            <label>Distrito Local</label>
+            <select id="sel-dl"><option value="">— Ninguno —</option></select>
+          </div>
+
+          <!-- Checkbox: Estado completo -->
+          <div class="row span12">
+            <label><input type="checkbox" id="all-state"/> Estado completo (todas las secciones)</label>
+            <div class="hint">Ignora Municipio/DF/DL y muestra todas las secciones del estado.</div>
+          </div>
+
+          <!-- Resumen del universo seleccionado -->
+          <div class="row span12">
+            <div id="u-sum" class="hint">Universo: —</div>
+          </div>
+
+          <!-- Inputs: Rutas de archivos -->
+          <div class="row span6">
+            <label>GeoJSON</label>
+            <input id="geo" value="data/geo/secciones.geojson"/>
+          </div>
+          <div class="row span6">
+            <label>Catálogo territorial (nombres)</label>
+            <input id="catalog" value="data/catalogo_territorial.json"/>
+          </div>
+
+          <!-- Acciones (botones) -->
+          <div class="row span12 actions">
+            <!--<button class="btn" id="load">Cargar opciones</button>-->
+            <!--<button class="btn primary" id="open">Abrir Análisis Territorial</button>-->
+          </div>
+        </div>
+      </div>
+
+  <!-- =============================== -->
+  <!-- Sección: Tarjetas de módulos   -->
+  <!-- =============================== -->
+  <!-- Tarjetas de módulos: DESHABILITADAS hasta "Cargar opciones" -->
+  <section id="mods" class="modgrid">
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-analisis">📊</div>
+          <div><div class="modtitle">Análisis Territorial</div><div class="moddesc">Mapas, comparativas y consultas.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('analisis_territorial.html','_self')">Abrir</button>
+      </div>
+
+        <!-- Tarjeta: Social -->
+        <div class="modcard disabled">
+          <div class="modhead">
+            <div class="modico i-social" style="background:#3b82f6">💬</div>
+            <div>
+              <div class="modtitle">Social</div>
+              <div class="moddesc">Redes, interacción y comunicación.</div>
+            </div>
+          </div>
+    <button class="btn mod-btn" onclick="window.open('socioeconomico.html','_self')">Abrir</button>
+        </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-ganar">🏆</div>
+          <div><div class="modtitle">Ganar Todo</div><div class="moddesc">Brechas, metas, priorización.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('ganar_todo.html','_self')">Abrir</button>
+      </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-campo">🗺️</div>
+          <div><div class="modtitle">Campo</div><div class="moddesc">Levantamientos y control.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('campo.html','_self')">Abrir</button>
+      </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-estr">👥</div>
+          <div><div class="modtitle">Estructura</div><div class="moddesc">Representantes y crecimiento.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('estructura.html','_self')">Abrir</button>
+      </div>
+
+      <div class="modcard disabled">
+        <div class="modhead">
+          <div class="modico i-diad">📅</div>
+          <div><div class="modtitle">Día D</div><div class="moddesc">Metas y operación.</div></div>
+        </div>
+  <button class="btn mod-btn" onclick="window.open('dia_D.html','_self')">Abrir</button>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="src/portal.js"></script>
+
+    <!-- ===================== -->
+    <!-- Scripts de la página -->
+    <!-- ===================== -->
+    <script>
+      // =============================
+      // Carga de catálogo territorial
+      // =============================
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("data/catalogo_territorial.json")
+          .then(response => response.json())
+          .then(data => {
+            cargarMunicipios(data.municipios);              // Llena el select de municipios
+            cargarDistritos("sel-df", data.distritos_federales); // Llena el select de DF
+            cargarDistritos("sel-dl", data.distritos_locales);   // Llena el select de DL
+
+            // ✅ AQUÍ: ya existen allSt, selMun, selDf, selDl
+            AT_initUniverseDefault();
+          })
+          .catch(error => console.error("Error al cargar el catálogo:", error));
+      });
+
+
+      // =============================
+      // Funciones para llenar selects
+      // =============================
+      function cargarMunicipios(municipios) {
+        const select = document.getElementById("sel-mun");
+        Object.entries(municipios).forEach(([id, nombre]) => {
+          const option = document.createElement("option");
+          option.value = id;
+          option.textContent = nombre;
+          select.appendChild(option);
+        });
+      }
+
+      function cargarDistritos(selectId, distritos) {
+        const select = document.getElementById(selectId);
+        distritos.forEach(num => {
+          const option = document.createElement("option");
+          option.value = num;
+          option.textContent = `Distrito ${num}`;
+          select.appendChild(option);
+        });
+      }
+
+      // =============================
+      // Habilitar/deshabilitar módulos
+      // =============================
+      document.addEventListener('DOMContentLoaded', function () {
+        const selMun = document.getElementById('sel-mun');
+        const selDf  = document.getElementById('sel-df');
+        const selDl  = document.getElementById('sel-dl');
+
+        // Habilita los módulos si hay selección
+        function habilitarModulos() {
+          const tarjetas = document.querySelectorAll('#mods .modcard');
+          tarjetas.forEach(card => {
+            card.classList.remove('disabled');
+            const boton = card.querySelector('.mod-btn');
+            boton.removeAttribute('disabled');
+          });
+        }
+
+        // Deshabilita los módulos si no hay selección
+        function deshabilitarModulos() {
+          const tarjetas = document.querySelectorAll('#mods .modcard');
+          tarjetas.forEach(card => {
+            card.classList.add('disabled');
+            const boton = card.querySelector('.mod-btn');
+            boton.setAttribute('disabled', true);
+          });
+        }
+
+        // Evalúa si hay selección válida
+        function evaluarSeleccion() {
+          const mun = selMun.value;
+          const df  = selDf.value;
+          const dl  = selDl.value;
+
+          if (mun || df || dl) {
+            habilitarModulos();
+          } else {
+            deshabilitarModulos();
+          }
+        }
+
+        selMun.addEventListener('change', evaluarSeleccion);
+        selDf.addEventListener('change', evaluarSeleccion);
+        selDl.addEventListener('change', evaluarSeleccion);
+      });
+    </script>
+
+    <script>
+(function(){
+  // Ajusta estos IDs a los que tengas en el portal:
+  const selMun = document.getElementById('sel-mun') || document.getElementById('selMun');
+  const selDf  = document.getElementById('sel-df')  || document.getElementById('selDF');
+  const selDl  = document.getElementById('sel-dl')  || document.getElementById('selDL');
+  const allSt  = document.getElementById('all-state') || document.getElementById('allState');
+  const uSum   = document.getElementById('u-sum');
+
+  // (Opcional) si pides las rutas en inputs/controles:
+  const inGeo  = document.getElementById('geo');
+  const inCat  = document.getElementById('catalog');
+
+  function clear(el){ if(el) el.value = ''; }
+  function exclusividad(changed){
+    if(changed === 'MUN'){ clear(selDf); clear(selDl); if(allSt) allSt.checked = false; }
+    if(changed === 'DF'){  clear(selMun); clear(selDl); if(allSt) allSt.checked = false; }
+    if(changed === 'DL'){  clear(selMun); clear(selDf); if(allSt) allSt.checked = false; }
+    if(changed === 'ALL'){ clear(selMun); clear(selDf); clear(selDl); }
+    evaluarSeleccion();
+  }
+
+  function obtenerUniverso(){
+    if(allSt && allSt.checked) return {scope:'ALL', key:null, label:'Estado completo'};
+    if(selMun && selMun.value) return {scope:'MUN', key:selMun.value, label:`Municipio ${selMun.options[selMun.selectedIndex].text}`};
+    if(selDf  && selDf.value)  return {scope:'DF',  key:selDf.value,  label:`Distrito Federal ${selDf.value}`};
+    if(selDl  && selDl.value)  return {scope:'DL',  key:selDl.value,  label:`Distrito Local ${selDl.value}`};
+    return null;
+  }
+
+  function pintarResumen(u){
+    if(!uSum) return;
+    uSum.textContent = u ? `Universo: ${u.label}` : 'Universo: —';
+  }
+
+  function persistir(u){
+    // Defaults de producción (tu nueva estructura):
+    const defaults = {
+      geo: 'data/geo/secciones.geojson',
+      catalog: 'data/catalogo_territorial.json',
+      electoral: {
+        P:  'data/electoral/P.json',
+        G:  'data/electoral/G.json',
+        A:  'data/electoral/A.json',
+        DF: 'data/electoral/DF.json',
+        DL: 'data/electoral/DL.json',
+        S:  'data/electoral/S.json'
+      },
+      // opcional
+      extra: 'data/Datos_Electoral.json'
+    };
+
+    // Si tienes inputs en el portal, respétalos; si no, usa defaults.
+    const paths = {
+      geo: (inGeo?.value || defaults.geo).trim(),
+      catalog: (inCat?.value || defaults.catalog).trim(),
+      electoral: defaults.electoral,
+      extra: defaults.extra
+    };
+
+    AT_setUniverse(u);
+
+    localStorage.setItem('AT_PATHS', JSON.stringify(paths));
+  }
+
+
+  function habilitarModulos(){
+    document.querySelectorAll('#mods .modcard').forEach(card=>{
+      card.classList.remove('disabled');
+      card.querySelector('.mod-btn')?.removeAttribute('disabled');
+    });
+  }
+  function deshabilitarModulos(){
+    document.querySelectorAll('#mods .modcard').forEach(card=>{
+      card.classList.add('disabled');
+      card.querySelector('.mod-btn')?.setAttribute('disabled', true);
+    });
+  }
+
+  function evaluarSeleccion(){
+    const u = obtenerUniverso();
+    pintarResumen(u);
+    if(u){
+      persistir(u);
+      habilitarModulos();
+    } else {
+      deshabilitarModulos();
+    }
+  }
+
+  selMun?.addEventListener('change', ()=>exclusividad('MUN'));
+  selDf?.addEventListener('change',  ()=>exclusividad('DF'));
+  selDl?.addEventListener('change',  ()=>exclusividad('DL'));
+  allSt?.addEventListener('change',  ()=>exclusividad('ALL'));
+
+  // Inicial:
+  evaluarSeleccion();
+})();
+
+function AT_initUniverseDefault(){
+  // si ya hay universo guardado, lo respetamos
+  const saved = localStorage.getItem("AT_UNIVERSE");
+  if (saved) return;
+
+  // default = Estado completo
+  if (allSt) allSt.checked = true;
+
+  const uDefault = { scope: "ALL", key: null, label: "Estado completo" };
+  AT_setUniverse(uDefault);
+}
+
+
+</script>
+
+<script>
+  (function(){
+    const panel = document.getElementById('sr-panel');
+    const btn = document.getElementById('sr-toggle');
+    if(!panel || !btn) return;
+
+    // Estado inicial abierto
+    panel.classList.remove('sr-closed');
+    btn.setAttribute('aria-expanded', 'true');
+
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      const isClosed = panel.classList.toggle('sr-closed');
+      btn.setAttribute('aria-expanded', String(!isClosed));
+    });
+  })();
+</script>
+
+<script>
+  (function(){
+    const modal   = document.getElementById('sr-modal');
+    const openBtn = document.querySelector('.sr-cta');   // tu botón "Ver guía rápida"
+    const closeEls = modal.querySelectorAll('[data-sr-close], .sr-modal__backdrop');
+
+    if(!modal || !openBtn) return;
+
+    let lastFocus = null;
+
+    function trapFocus(e){
+      const focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if(!focusables.length) return;
+      const first = focusables[0];
+      const last  = focusables[focusables.length - 1];
+
+      if(e.key === 'Tab'){
+        if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+        else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+      } else if(e.key === 'Escape'){
+        close();
+      }
+    }
+
+    function open(e){
+      if(e) e.preventDefault();
+      lastFocus = document.activeElement;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      // foco al botón cerrar
+      const closeBtn = modal.querySelector('.sr-modal__close');
+      if(closeBtn) closeBtn.focus();
+      document.addEventListener('keydown', trapFocus);
+    }
+
+    function close(){
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', trapFocus);
+      if(lastFocus) lastFocus.focus();
+    }
+
+    openBtn.addEventListener('click', open);
+    closeEls.forEach(el => el.addEventListener('click', close));
+  })();
+</script>
+
+  <!-- BOTÓN MODO PRESENTACIÓN -->
+  <button id="preso-btn" class="preso-btn" title="Modo presentación (P)">
+    <!-- icono pantalla -->
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="M4 5h16v10H4zM8 19h8" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <script>
+  (function(){
+    const btn = document.getElementById('preso-btn');
+    function togglePreso(){
+      document.body.classList.toggle('presentation-mode');
+    }
+    btn.addEventListener('click', togglePreso);
+    // Atajo: P
+    window.addEventListener('keydown', (e)=>{
+      if (e.key.toLowerCase() === 'p' && !e.metaKey && !e.ctrlKey && !e.altKey){
+        e.preventDefault(); togglePreso();
+      }
+    });
+  })();
+</script>
+
+  <script>
+  (function(){
+    // Formateo simple
+    const fmt = (n)=> new Intl.NumberFormat('es-MX').format(Math.max(0, Math.round(n||0)));
+
+    // Animación de conteo
+    function countTo(el, to, ms=500){
+      const from = parseInt((el.textContent||'0').replace(/\D/g,'')) || 0;
+      const start = performance.now();
+      const dur = Math.max(0, ms);
+      function tick(t){
+        const p = Math.min(1, (t - start)/dur);
+        el.textContent = fmt(from + (to - from)*p);
+        if(p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // Set de KPIs + progreso
+    function setKPIs({ topSecciones, margenMenor3, abstAlta, rutaPorc }){
+      // Elementos (con fallback si no pusiste IDs)
+      const elTop  = document.getElementById('kpi-top')  || document.querySelector('.sr-kpis .sr-kpi:nth-child(1) .sr-kpi-value');
+      const elM3   = document.getElementById('kpi-m3')   || document.querySelector('.sr-kpis .sr-kpi:nth-child(2) .sr-kpi-value');
+      const elAbst = document.getElementById('kpi-abst') || document.querySelector('.sr-kpis .sr-kpi:nth-child(3) .sr-kpi-value');
+      const bar    = document.querySelector('.sr-prog-bar i');
+      const num    = document.querySelector('.sr-prog-num');
+
+      if(elTop)  countTo(elTop,  Number(topSecciones||0), 600);
+      if(elM3)   countTo(elM3,   Number(margenMenor3||0), 600);
+      if(elAbst) countTo(elAbst, Number(abstAlta||0),     600);
+
+      const p = Math.max(0, Math.min(100, Number(rutaPorc||0)));
+      if(bar) bar.style.width = p + '%';
+      if(num) num.textContent = p + '%';
+    }
+
+    // Exponer a global por si llamas desde tu lógica de consultas
+    window.ATKPI = { set: setKPIs };
+
+    // 🔵 RELLENO RÁPIDO (DF 2 DEMO): reemplaza con tus valores reales
+    // Ejemplo: 10 secciones foco, 7 con margen <3%, 14 con abstención alta, avance 68%
+    setKPIs({ topSecciones: 10, margenMenor3: 7, abstAlta: 14, rutaPorc: 68 });
+
+    // Opcional: actualizar cuando ejecutes la consulta principal (si tienes un botón)
+    document.getElementById('btn-ejecutar')?.addEventListener('click', ()=>{
+      // Llama aquí con tus números calculados:
+      // ATKPI.set({ topSecciones: X, margenMenor3: Y, abstAlta: Z, rutaPorc: R });
+    });
+  })();
+  </script>
+
+  <script>
+    const btnVerManual = document.getElementById('btnVerManual');
+    const vistaQuick = document.querySelector('.sr-view--quick');
+    const vistaManual = document.querySelector('.sr-view--manual');
+    const titulo = document.getElementById('sr-modal-title');
+
+    if (btnVerManual && vistaQuick && vistaManual) {
+      btnVerManual.addEventListener('click', () => {
+        vistaQuick.hidden = true;
+        vistaManual.hidden = false;
+        titulo.textContent = 'Manual AT Análisis 27-30';
+      });
+    }
+
+  </script>
+
+
+    <div id="manualATModal" class="manual-modal hidden">
+    <div class="manual-panel">
+
+      <div class="manual-header">
+        <h2>Manual AT Análisis 27-30</h2>
+        <button id="cerrarManualAT">✕</button>
+      </div>
+
+      <div class="manual-content">
+        <div id="manualATContent" data-src="data/Manual/manual.txt">
+          <p>El manual se cargara aqui.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <nav class="manual-index">
+    <a href="#cap1">Intro</a>
+    <a href="#cap2">Visión</a>
+    <a href="#cap3">Navegación</a>
+    <a href="#cap4">AT</a>
+    <a href="#cap5">GT</a>
+    <a href="#cap6">AS</a>
+    <a href="#cap7">CT</a>
+    <a href="#cap8">ET</a>
+    <a href="#cap9">DD</a>
+    <a href="#cap10">Cierre</a>
+  </nav>
+
+          <button id="btnManualAT" class="btn-manual">
+          📘 Manual AT 27-30
+        </button>
+
+
+
+  <script>
+
+    function AT_clearLegacyKeys(){
+      ["AT_SCOPE","AT_MUN_ID","AT_DF_ID","AT_DL_ID"].forEach(k => localStorage.removeItem(k));
+    }
+
+    function AT_setUniverse(u){
+      if(!u) return;
+
+      // Evita loops por eventos encadenados
+      if (AT_setUniverse.__locking) return;
+      AT_setUniverse.__locking = true;
+
+      try {
+        // Limpia keys viejas (pero SIN disparar setUniverse otra vez)
+        AT_clearLegacyKeys();
+
+        // Guarda universo
+        localStorage.setItem("AT_UNIVERSE", JSON.stringify({ ...u, ts: Date.now() }));
+        localStorage.setItem("AT_SCOPE", u.scope || "");
+
+        // Guarda id según scope
+        if (u.scope === "MUN") localStorage.setItem("AT_MUN_ID", String(u.key));
+        if (u.scope === "DF")  localStorage.setItem("AT_DF_ID",  String(u.key));
+        if (u.scope === "DL")  localStorage.setItem("AT_DL_ID",  String(u.key));
+
+        // (Opcional) debug
+        console.log("[AT] Universo guardado:", u);
+
+      } finally {
+        AT_setUniverse.__locking = false;
+      }
+    }
+
+
+
+
+    (() => {
+      const btnManual = document.getElementById('btnManualAT');
+      const manualModal = document.getElementById('manualATModal');
+      const closeManual = document.getElementById('cerrarManualAT');
+      const manualContent = document.getElementById('manualATContent');
+      const manualSrc = manualContent?.dataset.src || 'data/Manual/manual.txt';
+      let manualLoaded = false;
+
+      const openManual = () => {
+        if (!manualModal) return;
+        manualModal.classList.remove('hidden');
+        if (!manualLoaded) loadManual();
+      };
+
+      const closeManualFn = () => {
+        manualModal?.classList.add('hidden');
+      };
+
+      const applyInlineFormatting = (text) =>
+        text.replace(/'''(.*?)'''/g, '<strong>$1</strong>');
+
+      const buildManualHtml = (raw) => {
+        const prepared = raw.replace(/:\s*([*#])\s+/g, ':\n$1 ');
+        const lines = prepared.split(/\r?\n/);
+        const html = [];
+        let listType = null;
+        let inParagraph = false;
+
+        const closeList = () => {
+          if (listType) {
+            html.push(`</${listType}>`);
+            listType = null;
+          }
+        };
+
+        const closeParagraph = () => {
+          if (inParagraph) {
+            html.push('</p>');
+            inParagraph = false;
+          }
+        };
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            closeParagraph();
+            closeList();
+            continue;
+          }
+
+          const headingMatch = trimmed.match(/^(=+)\s*(.+?)\s*=+$/);
+          if (headingMatch) {
+            closeParagraph();
+            closeList();
+            const level = Math.min(3, headingMatch[1].length);
+            const tag = level === 1 ? 'h2' : level === 2 ? 'h3' : 'h4';
+            const headingText = applyInlineFormatting(headingMatch[2].trim());
+            const capMatch = headingMatch[2].match(/CAP[ÍI]TULO\s+(\d+)/i);
+            const idAttr = capMatch ? ` id="cap${capMatch[1]}"` : '';
+            html.push(`<${tag}${idAttr}>${headingText}</${tag}>`);
+            continue;
+          }
+
+          const listMatch = trimmed.match(/^([*#])\s+(.*)$/);
+          if (listMatch) {
+            closeParagraph();
+            const nextListType = listMatch[1] === '*' ? 'ul' : 'ol';
+            if (listType && listType !== nextListType) {
+              closeList();
+            }
+            if (!listType) {
+              listType = nextListType;
+              html.push(`<${listType}>`);
+            }
+            html.push(`<li>${applyInlineFormatting(listMatch[2])}</li>`);
+            continue;
+          }
+
+          if (!inParagraph) {
+            closeList();
+            html.push('<p>');
+            inParagraph = true;
+            html.push(applyInlineFormatting(trimmed));
+          } else {
+            html.push('<br>' + applyInlineFormatting(trimmed));
+          }
+        }
+
+        closeParagraph();
+        closeList();
+        return html.join('');
+      };
+
+      const loadManual = async () => {
+        if (!manualContent) return;
+        manualContent.innerHTML = '<p>Cargando manual...</p>';
+        try {
+          const response = await fetch(manualSrc, { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          const text = await response.text();
+          manualContent.innerHTML = buildManualHtml(text);
+          manualLoaded = true;
+        } catch (error) {
+          manualContent.innerHTML =
+            '<p>No se pudo cargar el manual. Revisa la ruta de <code>data/Manual/manual.txt</code>.</p>';
+        }
+      };
+
+      btnManual?.addEventListener('click', openManual);
+      closeManual?.addEventListener('click', closeManualFn);
+      manualModal?.addEventListener('click', (event) => {
+        if (event.target === manualModal) {
+          closeManualFn();
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && manualModal && !manualModal.classList.contains('hidden')) {
+          closeManualFn();
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>
+
+

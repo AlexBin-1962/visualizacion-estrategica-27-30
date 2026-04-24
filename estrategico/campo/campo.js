@@ -1,0 +1,3719 @@
+﻿      // --- Map helper a prueba de colisiones ---
+      function atMap() {
+        const m = ensureLeafletMap(); // tu función ya existente
+        if (!m || !(m instanceof L.Map)) {
+          throw new Error("[AT] Mapa no inicializado correctamente");
+        }
+        return m;
+      }
+
+      // ===== 0) Campos (ajusta si tus nombres son distintos) =====
+      // DL = Distrito Local, DF = Distrito Federal
+      const FIELD_KEYS = {
+        mun: "MUNICIPIO",
+        dl: "DISTRITO_L",
+        df: "DISTRITO_F",
+      };
+
+      const paths = JSON.parse(localStorage.getItem("AT_PATHS") || "{}");
+      const urlGeo = paths.geo || "../data/geo/secciones.geojson";
+      const catUrl = paths.catalog || "../data/catalogo_territorial.json";
+      const ELP = paths.electoral?.P || "../data/electoral/P.json";
+      // ...
+
+      // ===== 1) Mapa único y chequeo =====
+      function ensureLeafletMap() {
+        if (window.__AT_MAP && window.__AT_MAP instanceof L.Map)
+          return window.__AT_MAP;
+        const m = L.map("map", {
+          zoomControl: true,
+          maxZoom: 19
+        }).setView([21.0, -101.3], 7);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OSM",
+          maxZoom: 19,
+          maxNativeZoom: 19
+        }).addTo(m);
+        window.__AT_MAP = m;
+        return m;
+      }
+      function assertIsLeafletMap(m) {
+        if (!(m instanceof L.Map) || typeof m.addLayer !== "function") {
+          throw new Error(
+            '[AT] addTo(): destino no es un Leaflet Map. Revisa variables llamadas "map" o dobles inicializaciones.'
+          );
+        }
+      }
+
+      function closeSecInfoPanel() {
+        const box = document.getElementById("sec-info");
+        if (box) box.style.display = "none";
+        // Si quieres limpiar resaltado y etiquetas al cerrar:
+        if (typeof clearSectionOverlays === "function") clearSectionOverlays();
+      }
+
+      function AT_isDockedPanel(el) {
+        return !!(el && el.classList && el.classList.contains("dock-panel"));
+      }
+      function AT_dockPanel(el) {
+        if (!el) return;
+        el.classList.add("dock-panel");
+        const host = document.getElementById("dash-panels");
+        if (host && el.parentElement !== host) host.appendChild(el);
+      }
+      function AT_watchDockPanels() {
+        const host = document.getElementById("dash-panels");
+        if (!host || host.__dockObserver) return;
+        const dockIfNeeded = (node) => {
+          if (!node || node.nodeType !== 1) return;
+          if (node.id && /^AT27_/.test(node.id) && /_panel$/.test(node.id)) {
+            AT_dockPanel(node);
+          }
+        };
+        const obs = new MutationObserver((mutations) => {
+          for (const m of mutations) {
+            for (const n of m.addedNodes) {
+              dockIfNeeded(n);
+              if (n.querySelectorAll) {
+                n.querySelectorAll('[id^="AT27_"][id$="_panel"]').forEach(
+                  dockIfNeeded
+                );
+              }
+            }
+          }
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+        host.__dockObserver = true;
+      }
+
+      function ensureSecInfoPanelWired() {
+        const box = document.getElementById("sec-info");
+        const hdr = box?.querySelector(".hdr");
+        if (!box || !hdr || box.__wired) return;
+
+        // Bloquear propagación al mapa (no “parpadea” al arrastrar)
+        if (window.L && L.DomEvent) {
+          L.DomEvent.disableClickPropagation(box);
+          L.DomEvent.disableScrollPropagation(box);
+        }
+
+        // Drag del panel
+        let dragging = false,
+          sx = 0,
+          sy = 0,
+          bx = 0,
+          by = 0;
+        hdr.addEventListener("mousedown", (e) => {
+          if (AT_isDockedPanel(box)) return;
+          if (e.target.closest(".btn-close")) return; // no iniciar drag si clic en "×"
+          e.preventDefault();
+          e.stopPropagation();
+          dragging = true;
+          const r = box.getBoundingClientRect();
+          sx = e.clientX;
+          sy = e.clientY;
+          bx = r.left;
+          by = r.top;
+          box.style.position = "absolute";
+          box.style.right = "auto";
+          box.style.bottom = "auto";
+          document.body.style.userSelect = "none";
+        });
+        window.addEventListener("mousemove", (e) => {
+          if (!dragging) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const dx = e.clientX - sx,
+            dy = e.clientY - sy;
+          box.style.left = bx + dx + "px";
+          box.style.top = by + dy + "px";
+        });
+        window.addEventListener("mouseup", () => {
+          if (!dragging) return;
+          dragging = false;
+          document.body.style.userSelect = "";
+        });
+
+        // Botón “×”
+        const btn = document.getElementById("sec-close");
+        if (btn && !btn.__wired) {
+          btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeSecInfoPanel();
+          });
+          btn.__wired = true;
+        }
+
+        box.__wired = true;
+      }
+
+      // ===== 2) Filtrado por universo =====
+      function toComp(v) {
+        if (v == null) return "";
+        const s = String(v).trim();
+        return isFinite(s) && s !== "" ? Number(s) : s.toUpperCase();
+      }
+      function matches(props, u) {
+        if (u.scope === "ALL") return true;
+        const keyField =
+          u.scope === "MUN"
+            ? FIELD_KEYS.mun
+            : u.scope === "DL"
+            ? FIELD_KEYS.dl
+            : FIELD_KEYS.df;
+        return toComp(props?.[keyField]) === toComp(u.key);
+      }
+      function filterGeojson(geojson, u) {
+        if (u.scope === "ALL") return geojson;
+        const features = (geojson.features || []).filter((f) =>
+          matches(f.properties, u)
+        );
+        return { ...geojson, features };
+      }
+
+      // ====== CARGA ELECTORAL (para obtener 24DL_LN) ======
+      function getPaths() {
+        try {
+          return JSON.parse(localStorage.getItem("AT_PATHS") || "{}");
+        } catch {
+          return {};
+        }
+      }
+      function getPuestoPath(p) {
+        const paths = getPaths();
+        return paths?.electoral?.[p] || `../data/electoral/${p}.json`;
+      }
+
+      window.AT_ELECT = window.AT_ELECT || {};
+      async function getElectData(puesto) {
+        if (window.AT_ELECT[puesto]) return window.AT_ELECT[puesto];
+        const res = await fetch(getPuestoPath(puesto));
+        if (!res.ok) throw new Error(`HTTP ${res.status} en ${puesto}`);
+        const js = await res.json();
+        window.AT_ELECT[puesto] = js;
+        return js;
+      }
+      // LN para 2024 desde DL; si no hay, intenta P (fallback)
+      async function getLN24DL(sec) {
+        const key = String(sec);
+        try {
+          const dl = await getElectData("DL");
+          const ln = dl?.secciones?.[key]?.["2024"]?.LN;
+          if (typeof ln === "number") return ln;
+        } catch (_) {}
+        try {
+          const p = await getElectData("P");
+          const ln = p?.secciones?.[key]?.["2024"]?.LN;
+          if (typeof ln === "number") return ln;
+        } catch (_) {}
+        return null;
+      }
+
+      // ====== ADYACENCIAS (Turf) ======
+      function bboxIntersects(b1, b2) {
+        return !(
+          b2[0] > b1[2] ||
+          b2[2] < b1[0] ||
+          b2[1] > b1[3] ||
+          b2[3] < b1[1]
+        );
+      }
+      function getAdjacents(feat) {
+        const all =
+          window.AT_DATA?.features ||
+          window.AT_CTX?.layer?.toGeoJSON?.()?.features ||
+          [];
+        if (!all.length) return [];
+        const b1 = turf.bbox(feat);
+        const out = [];
+        const sec1 = feat.properties?.SECCION;
+        for (const f of all) {
+          const p = f.properties || {};
+          if (p.SECCION === sec1) continue;
+          const b2 = turf.bbox(f);
+          if (!bboxIntersects(b1, b2)) continue;
+          try {
+            if (
+              turf.booleanTouches(feat, f) ||
+              turf.booleanOverlap(feat, f) ||
+              turf.booleanIntersects(feat, f)
+            ) {
+              out.push(f);
+            }
+          } catch (_) {}
+        }
+        return out.slice(0, 25); // cota de seguridad
+      }
+
+      // ====== LABELS SOBRE EL MAPA ======
+      function addLabelForFeature(feat, className, text) {
+        try {
+          const c = turf.centerOfMass(feat).geometry.coordinates; // [lon, lat]
+          const m = L.marker([c[1], c[0]], {
+            icon: L.divIcon({ className, html: text, iconSize: [0, 0] }),
+          });
+          window.__SEC_LABELS =
+            window.__SEC_LABELS || L.layerGroup().addTo(ensureLeafletMap());
+          window.__SEC_LABELS.addLayer(m);
+          return m;
+        } catch (_) {}
+        return null;
+      }
+
+      function clearSectionOverlays() {
+        const atMap = ensureLeafletMap();
+        if (window.__SEC_HL) {
+          try {
+            atMap.removeLayer(__SEC_HL);
+          } catch (_) {}
+          window.__SEC_HL = null;
+        }
+        if (window.__SEC_ADJ) {
+          try {
+            atMap.removeLayer(__SEC_ADJ);
+          } catch (_) {}
+          window.__SEC_ADJ = null;
+        }
+        if (window.__SEC_LABELS) {
+          try {
+            atMap.removeLayer(__SEC_LABELS);
+          } catch (_) {}
+          window.__SEC_LABELS = null;
+        }
+      }
+
+      // Dibuja selección + adyacentes + labels
+      function paintSelectionAndAdj(feat) {
+        const map = ensureLeafletMap();
+        clearSectionOverlays();
+
+        // resaltado principal
+        window.__SEC_HL = L.geoJSON(feat, {
+          style: { color: "#e91e63", weight: 3, fillOpacity: 0.25 },
+        }).addTo(map);
+        try {
+          const tightBounds = window.__SEC_HL.getBounds().pad(-0.05); // ~10% más cerca
+          map.fitBounds(tightBounds, { padding: [28, 28] });
+        } catch (_) {}
+
+        // adyacentes
+        const adj = getAdjacents(feat);
+        if (adj.length) {
+          window.__SEC_ADJ = L.geoJSON(
+            { type: "FeatureCollection", features: adj },
+            {
+              style: {
+                color: "#90a4ae",
+                weight: 1.2,
+                dashArray: "4,4",
+                fillOpacity: 0.05,
+              },
+            }
+          ).addTo(map);
+        }
+
+        // labels
+        const sec = feat.properties?.SECCION ?? "—";
+        addLabelForFeature(feat, "sec-label", `Sección ${sec}`);
+        for (const f of adj) {
+          const s2 = f.properties?.SECCION ?? "—";
+          addLabelForFeature(f, "sec-label-adj", s2);
+        }
+      }
+
+      function findSectionFeatureForPoint(lat, lng) {
+        const raw = window.AT_DATA;
+        if (!raw?.features?.length || !window.turf) return null;
+        const pt = turf.point([lng, lat]);
+        // Usa el universo actual si está filtrado; si no, recorre todo
+        const feats =
+          window.AT_CTX?.layer?.toGeoJSON?.()?.features || raw.features;
+        for (const f of feats) {
+          try {
+            if (turf.booleanPointInPolygon(pt, f)) return f;
+          } catch (_) {}
+        }
+        return null;
+      }
+
+      function setUbicacionFormAuto({ lat, lng }) {
+        const $seccion = document.getElementById("ec-seccion");
+        const $ambito = document.getElementById("ec-ambito");
+        const $dl = document.getElementById("ec-dl");
+        const $df = document.getElementById("ec-df");
+        const $muni = document.getElementById("ec-muni");
+        if (!$seccion || !$ambito) return null;
+
+        const feat = findSectionFeatureForPoint(lat, lng);
+        if (feat) {
+          const p = feat.properties || {};
+          const muni = p.MUNICIPIO ?? p.MUN ?? "";
+          const dl = p.DISTRITO_L ?? p.DL ?? "";
+          const df = p.DISTRITO_F ?? p.DF ?? "";
+
+          $seccion.value = p.SECCION ?? "";
+          $seccion.dataset.lat = lat;
+          $seccion.dataset.lng = lng;
+          $ambito.value = `MUN:${muni} · DL:${dl} · DF:${df}`;
+          if ($dl) $dl.value = dl;
+          if ($df) $df.value = df;
+          if ($muni) $muni.value = muni;
+          return { p, feat };
+        } else {
+          $seccion.dataset.lat = lat;
+          $seccion.dataset.lng = lng;
+          $ambito.value = "";
+          if ($dl) $dl.value = "";
+          if ($df) $df.value = "";
+          if ($muni) $muni.value = "";
+          return null;
+        }
+      }
+
+      // ====== PANEL FLOTANTE (drag + datos) ======
+      (function wireSecInfoPanel() {
+        const box = document.getElementById("sec-info");
+        const hdr = box?.querySelector(".hdr");
+        if (!box || !hdr || box.__wired) return;
+        let dragging = false,
+          sx = 0,
+          sy = 0,
+          bx = 0,
+          by = 0;
+        hdr.addEventListener("mousedown", (e) => {
+          if (AT_isDockedPanel(box)) return;
+          dragging = true;
+          sx = e.clientX;
+          sy = e.clientY;
+          const r = box.getBoundingClientRect();
+          bx = r.left;
+          by = r.top;
+          document.body.style.userSelect = "none";
+        });
+        window.addEventListener("mousemove", (e) => {
+          if (!dragging) return;
+          const dx = e.clientX - sx,
+            dy = e.clientY - sy;
+          box.style.left = bx + dx + "px";
+          box.style.top = by + dy + "px";
+          box.style.right = "auto";
+          box.style.bottom = "auto";
+          box.style.position = "absolute";
+        });
+        window.addEventListener("mouseup", () => {
+          dragging = false;
+          document.body.style.userSelect = "";
+        });
+        box.__wired = true;
+      })();
+
+      async function showSectionInfo(feat) {
+        ensureSecInfoPanelWired();
+        const p = feat.properties || {};
+        const sec = p.SECCION ?? "—";
+        const df = p[FIELD_KEYS.df] ?? "—";
+        const dl = p[FIELD_KEYS.dl] ?? "—";
+
+        // LN 24DL_LN
+        let ln = await getLN24DL(sec);
+        if (ln == null) ln = "—";
+
+        // Pintar
+        const box = document.getElementById("sec-info");
+        const ttl = box.querySelector(".ttl");
+        if (ttl) ttl.textContent = `Sección ${sec}`;
+        document.getElementById("si-sec").textContent = sec;
+        document.getElementById("si-df").textContent = df;
+        document.getElementById("si-dl").textContent = dl;
+        document.getElementById("si-ln").textContent = ln;
+        box.style.display = "block";
+      }
+
+      // ENTER + CLIC + ULTIMO TOKEN
+
+      function currentNeedle(q) {
+        if (!q) return "";
+        const parts = String(q)
+          .split(/[,;\s]+/)
+          .filter(Boolean);
+        return parts.length ? parts[parts.length - 1] : "";
+      }
+
+      // ===== Mini-selector de universo dentro del módulo =====
+      let __mini = { selMun: null, selDf: null, selDl: null, all: null };
+
+      function uniqueSorted(values) {
+        const arr = values.map((v) => String(v ?? "").trim()).filter(Boolean);
+        const set = Array.from(new Set(arr));
+        return set.sort((a, b) =>
+          isFinite(a) && isFinite(b)
+            ? Number(a) - Number(b)
+            : a.localeCompare(b, "es")
+        );
+      }
+      function buildMiniOptions(raw) {
+        const feats = raw.features || [];
+        const grab = (k) => uniqueSorted(feats.map((f) => f.properties?.[k]));
+        return {
+          mun: grab(FIELD_KEYS.mun),
+          df: grab(FIELD_KEYS.df),
+          dl: grab(FIELD_KEYS.dl),
+        };
+      }
+      function fillSelect(sel, arr) {
+        sel.innerHTML =
+          '<option value="">— Ninguno —</option>' +
+          arr.map((v) => `<option value="${v}">${v}</option>`).join("");
+      }
+      function getMiniUniverse() {
+        const { selMun, selDf, selDl, all } = __mini;
+        if (all.checked)
+          return { scope: "ALL", key: null, label: "Estado completo" };
+        if (selMun.value)
+          return {
+            scope: "MUN",
+            key: selMun.value,
+            label: `Municipio ${selMun.options[selMun.selectedIndex].text}`,
+          };
+        if (selDf.value)
+          return {
+            scope: "DF",
+            key: selDf.value,
+            label: `Distrito Federal ${selDf.value}`,
+          };
+        if (selDl.value)
+          return {
+            scope: "DL",
+            key: selDl.value,
+            label: `Distrito Local ${selDl.value}`,
+          };
+        return null;
+      }
+      function miniExclusivity(which) {
+        const { selMun, selDf, selDl, all } = __mini;
+        if (which === "ALL") {
+          selMun.value = "";
+          selDf.value = "";
+          selDl.value = "";
+        }
+        if (which === "MUN") {
+          selDf.value = "";
+          selDl.value = "";
+          all.checked = false;
+        }
+        if (which === "DF") {
+          selMun.value = "";
+          selDl.value = "";
+          all.checked = false;
+        }
+        if (which === "DL") {
+          selMun.value = "";
+          selDf.value = "";
+          all.checked = false;
+        }
+        applyMiniUniverse();
+      }
+      function applyMiniUniverse() {
+        const u2 = getMiniUniverse();
+        if (!u2) return;
+        // 1) Persistir
+        localStorage.setItem(
+          "AT_UNIVERSE",
+          JSON.stringify({ ...u2, ts: Date.now() })
+        );
+        // 2) Redibujar con el nuevo universo usando el raw ya cargado
+        const map = ensureLeafletMap();
+        const filtered2 = filterGeojson(window.AT_DATA, u2);
+        if (window.AT_CTX?.layer) {
+          map.removeLayer(AT_CTX.layer);
+        }
+        const layer2 = L.geoJSON(filtered2, {
+          style: { color: "#7d0025", weight: 1.2, fillOpacity: 0.15 },
+        }).addTo(map);
+        try {
+          map.fitBounds(layer2.getBounds(), { padding: [20, 20] });
+        } catch (e) {}
+        window.AT_CTX = {
+          ...(window.AT_CTX || {}),
+          universe: u2,
+          layer: layer2,
+        };
+        // 3) Header
+        const hdr = document.querySelector("#panel-header span");
+        if (hdr) {
+          hdr.textContent = `Análisis Territorial · ${u2.label}`;
+        }
+        refreshSectionSearch(u2);
+      }
+      function initMiniSelector(raw, u) {
+        // Guardar el geojson bruto para futuros re-filtros
+        window.AT_DATA = raw;
+
+        __mini.selMun = document.getElementById("mini-sel-mun");
+        labelMunicipiosFromCatalog("#mini-sel-mun");
+
+        __mini.selDf = document.getElementById("mini-sel-df");
+        __mini.selDl = document.getElementById("mini-sel-dl");
+        __mini.all = document.getElementById("mini-all-state");
+
+        const opt = buildMiniOptions(raw);
+        fillSelect(__mini.selMun, opt.mun);
+        fillSelect(__mini.selDf, opt.df);
+        fillSelect(__mini.selDl, opt.dl);
+
+        // Reflejar el universo actual
+        if (u.scope === "ALL") {
+          __mini.all.checked = true;
+        }
+        if (u.scope === "MUN") {
+          __mini.selMun.value = String(u.key);
+        }
+        if (u.scope === "DF") {
+          __mini.selDf.value = String(u.key);
+        }
+        if (u.scope === "DL") {
+          __mini.selDl.value = String(u.key);
+        }
+
+        async function labelMunicipiosFromCatalog(selectId) {
+          const sel = document.querySelector(selectId);
+          if (!sel) return;
+
+          // 1) Ruta del catálogo desde el Portal (AT_PATHS) o fallback
+          let catUrl = "../data/catalogo_territorial.json";
+          try {
+            const paths = JSON.parse(localStorage.getItem("AT_PATHS") || "{}");
+            if (paths?.catalog) catUrl = paths.catalog;
+          } catch {}
+
+          // 2) Cargar catálogo
+          let cat = null;
+          try {
+            const r = await fetch(catUrl);
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            cat = await r.json();
+          } catch (e) {
+            console.warn("[AT] No se pudo cargar el catálogo:", e);
+            return; // salimos sin tocar etiquetas
+          }
+
+          const mapa = cat?.municipios || {};
+          // helper: si el catálogo trae ceros a la izquierda en las llaves
+          const getName = (code) => {
+            const s = String(code);
+            return (
+              mapa[s] ||
+              mapa[s.padStart(2, "0")] ||
+              mapa[s.padStart(3, "0")] ||
+              s
+            );
+          };
+
+          // 3) Reetiquetar opciones (sin cambiar value)
+          for (const opt of sel.options) {
+            if (!opt.value) continue; // deja "— Ninguno —"
+            const name = getName(opt.value);
+            opt.text = `${opt.value} — ${name}`;
+          }
+        }
+
+        // Eventos (auto-ejecuta)
+        __mini.selMun.addEventListener("change", () => miniExclusivity("MUN"));
+        __mini.selDf.addEventListener("change", () => miniExclusivity("DF"));
+        __mini.selDl.addEventListener("change", () => miniExclusivity("DL"));
+        __mini.all.addEventListener("change", () => miniExclusivity("ALL"));
+      }
+
+      // Nombre fijo del campo (texto) del municipio
+      const MUN_NAME_KEY = "MUNICIPIO";
+
+      // Detecta automáticamente el campo de CÓDIGO de municipio (si no, usa el nombre)
+      function detectMunCodeKey(raw) {
+        const feats = raw.features || [];
+        const candidates = [
+          "MUN",
+          "CVE_MUN",
+          "CLV_MUN",
+          "ID_MUN",
+          "MUNICIPIO_ID",
+          "MUNICIPIO_CVE",
+          "CVE_MUNICIPIO",
+          "CVE_MPIO",
+        ];
+        for (const k of candidates) {
+          const ok = feats.some((f) => {
+            const v = f.properties?.[k];
+            return (
+              v != null &&
+              String(v).trim() !== "" &&
+              String(v).toUpperCase() !== "NULL"
+            );
+          });
+          if (ok) return k;
+        }
+        return null; // fallback será MUN_NAME_KEY
+      }
+
+      // —— Utils de texto ——
+      function _norm(s) {
+        if (s == null) return "";
+        return String(s)
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toUpperCase()
+          .trim();
+      }
+      function _isDigits(s) {
+        return /^[0-9]+$/.test(String(s || ""));
+      }
+
+      // —— Nombre de municipio desde catálogo (si existe) ——
+      function getMunNameFromCatalog(code) {
+        const cat = window.AT_CATALOG;
+        if (!cat?.municipios) return String(code ?? "");
+        const s = String(code);
+        // maneja posibles ceros a la izquierda
+        return (
+          cat.municipios[s] ||
+          cat.municipios[s.padStart(2, "0")] ||
+          cat.municipios[s.padStart(3, "0")] ||
+          s
+        );
+      }
+
+      // —— Índice de secciones ——
+      let __SEC_INDEX = { items: [], global: false };
+
+      function buildSectionIndex(raw, universe, useGlobal) {
+        const feats = raw?.features || [];
+        const munKey = window.AT_KEYS?.munCode || FIELD_KEYS.mun;
+        const items = [];
+
+        // dataset base: global = todas, local = filtradas por universo
+        const base = useGlobal
+          ? feats
+          : filterGeojson(raw, universe).features || [];
+
+        for (const f of base) {
+          const p = f.properties || {};
+          const sec = p.SECCION ?? p.Seccion ?? p.seccion ?? null;
+          if (sec == null) continue;
+
+          const munCode = p[munKey];
+          const munName = getMunNameFromCatalog(munCode);
+          const df = p[FIELD_KEYS.df];
+          const dl = p[FIELD_KEYS.dl];
+
+          // texto para búsqueda
+          const text = `${sec} ${munCode ?? ""} ${munName ?? ""} ${df ?? ""} ${
+            dl ?? ""
+          }`;
+          // bounds (si multiparte, Leaflet lo resuelve)
+          let bounds = null;
+          try {
+            bounds = L.geoJSON(f).getBounds();
+          } catch (_) {}
+
+          items.push({
+            sec: String(sec).trim(),
+            munCode: munCode,
+            munName: munName,
+            df,
+            dl,
+            feature: f,
+            textNorm: _norm(text),
+            bounds,
+          });
+        }
+
+        __SEC_INDEX = { items, global: !!useGlobal };
+      }
+
+      function searchSections(query, limit = 15) {
+        const q = _norm(query);
+        if (!q) return [];
+        const ds = __SEC_INDEX.items;
+
+        // Heurística sencilla:
+        // - si es numérico puro: prioridad a SECCION que empiece con q
+        // - si no: contiene tokens
+        if (_isDigits(q)) {
+          const starts = ds.filter((it) => _norm(it.sec).startsWith(q));
+          if (starts.length >= limit) return starts.slice(0, limit);
+          const contains = ds.filter((it) => _norm(it.sec).includes(q));
+          return [...starts, ...contains].slice(0, limit);
+        } else {
+          const tokens = q.split(/\s+/).filter(Boolean);
+          return ds
+            .filter((it) => tokens.every((t) => it.textNorm.includes(t)))
+            .slice(0, limit);
+        }
+      }
+
+      // —— UI de sugerencias ——
+      let __SEC_HIGHLIGHT = null;
+
+      function renderSecSuggestions(list) {
+        const ul = document.getElementById("sec-suggest");
+        if (!ul) return;
+        if (!list.length) {
+          ul.style.display = "none";
+          ul.innerHTML = "";
+          return;
+        }
+
+        ul.innerHTML = list
+          .map((it) => {
+            const label = `${it.sec} — ${
+              it.munName || it.munCode || ""
+            }`.replace(/\s+-\s+$/, "");
+            const meta = [];
+            if (it.dl != null) meta.push(`DL ${it.dl}`);
+            if (it.df != null) meta.push(`DF ${it.df}`);
+            const sub = meta.length
+              ? `<small style="color:#64748b">${meta.join(" · ")}</small>`
+              : "";
+            return `<li data-sec="${it.sec}" style="padding:6px 8px; border-bottom:1px solid #e5e7eb; cursor:pointer">
+                    <div>${label}</div>${sub}
+                  </li>`;
+          })
+          .join("");
+        ul.style.display = "block";
+      }
+
+      function gotoSection(item) {
+        const atMap = window.AT_CTX?.map || ensureLeafletMap();
+
+        // 1) Resolver el feature de la sección
+        const sec = String(item.sec ?? item.SECCION ?? "");
+        let feat = item.feature;
+
+        if (!feat) {
+          const feats =
+            window.AT_CTX?.layer?.toGeoJSON?.().features ||
+            window.AT_DATA?.features ||
+            [];
+          feat = feats.find((f) => String(f.properties?.SECCION) === sec);
+        }
+
+        if (!feat) {
+          console.warn(
+            "[AT] No encontré el feature para la sección",
+            sec,
+            item
+          );
+          return;
+        }
+
+        // 2) Pintar selección + adyacentes + labels (esto limpia overlays previos)
+        paintSelectionAndAdj(feat);
+
+        // 3) Mostrar panel con DF, DL y LN (24DL_LN)
+        showSectionInfo(feat);
+
+        // 4) Feedback visual (parpadeo leve sobre el highlight actual)
+        const hl = window.__SEC_HL;
+        if (hl && typeof hl.setStyle === "function") {
+          try {
+            hl.setStyle({ weight: 4 });
+            setTimeout(() => {
+              try {
+                hl.setStyle({ weight: 3 });
+              } catch (_) {}
+            }, 220);
+          } catch (_) {}
+        }
+
+        // 5) Oculta la lista de sugerencias (si está visible)
+        const ul = document.getElementById("sec-suggest");
+        if (ul) ul.style.display = "none";
+      }
+
+      // Delegación de clic en las sugerencias (una sola vez)
+      (function wireSectionSearchEventsOnce() {
+        const ul = document.getElementById("sec-suggest");
+        const input = document.getElementById("sec-q");
+        if (!ul || !input) return;
+
+        // Si está dentro de un form, evita submit al Enter
+        const form = input.closest("form");
+        form?.addEventListener("submit", (e) => e.preventDefault());
+
+        // Clic en cualquier <li data-sec="...">
+        if (!ul.__wiredClick) {
+          ul.addEventListener("click", (ev) => {
+            const li = ev.target.closest("li[data-sec]");
+            if (!li) return;
+            const sec = li.getAttribute("data-sec");
+            const item = (__SEC_INDEX?.items || []).find(
+              (x) => String(x.sec) === String(sec)
+            );
+            if (item) gotoSection(item);
+            ul.style.display = "none";
+          });
+          ul.__wiredClick = true;
+        }
+
+        // Enter en el input = ir al primer resultado
+        if (!input.__wiredKey) {
+          input.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter") {
+              ev.preventDefault(); // <- evita submit/autocomplete
+              const results = searchSections(input.value, 1);
+              const needle = currentNeedle(input.value);
+              const [first] = searchSections(needle, 1);
+              if (first) gotoSection(first);
+              ul.style.display = "none";
+            }
+            if (ev.key === "Escape") {
+              ul.style.display = "none";
+            }
+          });
+          input.__wiredKey = true;
+        }
+
+        // Input: recalcula sugerencias usando el "último token"
+        if (!input.__wiredInput) {
+          input.addEventListener("input", () => {
+            const needle = currentNeedle(input.value);
+            renderSecSuggestions(searchSections(needle, 15));
+          });
+          input.__wiredInput = true;
+        }
+      })();
+
+      // —— Inicializar Buscador en el módulo ——
+      function initSectionSearch(raw, universe) {
+        const input = document.getElementById("sec-q");
+        const list = document.getElementById("sec-suggest");
+        const globalC = document.getElementById("sec-global");
+        if (!input || !list) return;
+
+        // construir índice (por universo actual)
+        buildSectionIndex(raw, universe, !!globalC?.checked);
+
+        // Cambiar ámbito (global / universo actual)
+        globalC?.addEventListener("change", () => {
+          buildSectionIndex(raw, universe, !!globalC.checked);
+          // refresca sugerencias con la query actual
+          if (input.value) {
+            renderSecSuggestions(searchSections(input.value, 15));
+          }
+        });
+      }
+
+      // —— Cuando cambies de universo con tu mini-selector, reindexa ——
+      function refreshSectionSearch(universe) {
+        const input = document.getElementById("sec-q");
+        const globalC = document.getElementById("sec-global");
+        if (!window.AT_DATA || !input) return;
+        buildSectionIndex(window.AT_DATA, universe, !!globalC?.checked);
+        if (input.value) {
+          renderSecSuggestions(searchSections(input.value, 15));
+        }
+      }
+
+      function getRawForIndex() {
+        // Usa el dataset completo si ya lo cacheaste
+        if (window.AT_DATA) return window.AT_DATA;
+        // Si no, al menos usa lo ya pintado en el mapa
+        const lyr = window.AT_CTX?.layer;
+        return lyr && typeof lyr.toGeoJSON === "function"
+          ? lyr.toGeoJSON()
+          : null;
+      }
+
+      // ===== 3) Boot =====
+      document.addEventListener("DOMContentLoaded", async () => {
+        AT_dockPanel(document.getElementById("sec-info"));
+        AT_dockPanel(document.getElementById("estrategico-campo-panel"));
+        AT_watchDockPanels();
+
+        // a) Leer universo y rutas puestos en el PORTAL
+        const u = JSON.parse(localStorage.getItem("AT_UNIVERSE") || "null");
+        const paths = JSON.parse(
+          localStorage.getItem("AT_PATHS") || '{"geo":""}'
+        );
+        if (!u) {
+          const hdr = document.querySelector("#panel-header span");
+          hdr && (hdr.textContent += " · selecciona el universo en el Portal");
+          setTimeout(() => {
+            location.href = "portal.html";
+          }, 600);
+          return;
+        }
+
+        // b) Etiqueta del universo
+        const hdr = document.querySelector("#panel-header span");
+        hdr && (hdr.textContent += ` · ${u.label}`);
+
+        // c) Mapa único
+        const atMap = ensureLeafletMap();
+        assertIsLeafletMap(atMap);
+
+        // d) Cargar y filtrar GeoJSON
+        const url = paths.geo || "../data/geo/secciones.geojson"; // <-- ajusta si tu ruta difiere
+
+        // Cargar catálogo territorial (para nombres visibles)
+        const catUrl =
+          (paths.catalog && paths.catalog.trim()) ||
+          "../data/catalogo_territorial.json";
+        let catalog = window.AT_CATALOG || null;
+        if (!catalog) {
+          try {
+            const rc = await fetch(catUrl);
+            if (!rc.ok)
+              throw new Error(`HTTP ${rc.status} al cargar catálogo ${catUrl}`);
+            catalog = await rc.json();
+            window.AT_CATALOG = catalog;
+          } catch (err) {
+            console.warn("[AT] No se pudo cargar el catálogo de nombres:", err);
+            window.AT_CATALOG = catalog = null; // seguimos sin nombres amigables
+          }
+        }
+
+        let raw = window.AT_DATA || null; // usa caché si ya existe
+        if (!raw) {
+          try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status} al cargar ${url}`);
+            raw = await res.json(); // ✅ solo una vez
+            window.AT_DATA = raw; // ✅ guarda en caché aquí
+          } catch (err) {
+            console.error("[AT] Error cargando GeoJSON:", err);
+            alert("No se pudo cargar el GeoJSON");
+            return;
+          }
+        }
+        // a partir de aquí, usa 'raw'
+
+        const filtered = filterGeojson(raw, u);
+        console.log(
+          "[AT] Universo:",
+          u,
+          "Total:",
+          raw.features?.length || 0,
+          "Filtradas:",
+          filtered.features?.length || 0
+        );
+
+        if (!filtered.features || filtered.features.length === 0) {
+          console.warn(
+            "[AT] No hay geometrías para el universo seleccionado:",
+            u
+          );
+          alert("No hay datos para el universo seleccionado");
+        }
+
+        // Nombre fijo del campo (texto) del municipio
+        const MUN_NAME_KEY = "MUNICIPIO";
+
+        // Detecta campo de CÓDIGO (si existe); si no, usa el de nombre
+        function detectMunCodeKey(raw) {
+          const feats = raw.features || [];
+          const candidates = [
+            "MUN",
+            "CVE_MUN",
+            "CLV_MUN",
+            "ID_MUN",
+            "MUNICIPIO_ID",
+            "MUNICIPIO_CVE",
+            "CVE_MUNICIPIO",
+            "CVE_MPIO",
+          ];
+          for (const k of candidates) {
+            if (feats.some((f) => (f.properties?.[k] ?? "") !== "")) return k;
+          }
+          return null;
+        }
+
+        const munCodeKey = detectMunCodeKey(raw) || MUN_NAME_KEY; // fallback: nombre
+        FIELD_KEYS.mun = munCodeKey;
+        window.AT_KEYS = { munCode: munCodeKey, munName: MUN_NAME_KEY };
+
+        // e) Dibujar capa
+        const layer = L.geoJSON(filtered, {
+          style: { color: "#000000", weight: 1.2, fillOpacity: 0.15 },
+          onEachFeature: (feat, lyr) => {
+            const p = feat.properties || {};
+            const muni = p[FIELD_KEYS.mun] ?? "—";
+            const dl = p[FIELD_KEYS.dl] ?? "—";
+            const df = p[FIELD_KEYS.df] ?? "—";
+            lyr.bindPopup(
+              `<b>Sección</b>: ${
+                p.SECCION ?? "—"
+              }<br><b>Mun</b>: ${muni}<br><b>DL</b>: ${dl}<br><b>DF</b>: ${df}`
+            );
+            lyr.on("mouseover", () => lyr.setStyle({ weight: 2 }));
+            lyr.on("mouseout", () => lyr.setStyle({ weight: 1.2 }));
+          },
+        }).addTo(atMap);
+
+        try {
+          atMap.fitBounds(layer.getBounds(), { padding: [20, 20] });
+        } catch (e) {}
+        window.AT_CTX = { universe: u, paths, map: atMap, layer };
+
+        function getMunNameFromCatalog(code) {
+          const cat = window.AT_CATALOG;
+          if (!cat?.municipios) return String(code ?? "");
+          return cat.municipios[String(code)] || String(code ?? "");
+        }
+        function getDfListFromCatalog(feats) {
+          return window.AT_CATALOG?.distritos_federales &&
+            window.AT_CATALOG.distritos_federales.length
+            ? window.AT_CATALOG.distritos_federales
+            : uniqSorted(feats.map((f) => f.properties?.[FIELD_KEYS.df]));
+        }
+        function getDlListFromCatalog(feats) {
+          return window.AT_CATALOG?.distritos_locales &&
+            window.AT_CATALOG.distritos_locales.length
+            ? window.AT_CATALOG.distritos_locales
+            : uniqSorted(feats.map((f) => f.properties?.[FIELD_KEYS.dl]));
+        }
+        initMiniSelector(raw, u);
+        initSectionSearch(window.AT_DATA || raw, u);
+      });
+
+      (function wireATHotkeys() {
+        if (window.__AT_HOTKEYS) return;
+        window.__AT_HOTKEYS = true;
+
+        window.addEventListener("keydown", (e) => {
+          // Esc: cerrar panel
+          if (e.key === "Escape") {
+            if (document.getElementById("sec-info")?.style.display !== "none") {
+              e.preventDefault();
+              closeSecInfoPanel();
+            }
+          }
+          // Ctrl+K (o Cmd+K en Mac): enfocar buscador de secciones
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+            e.preventDefault();
+            document.getElementById("sec-q")?.focus();
+          }
+        });
+      })();
+    
+
+// ---- inline block separator ----
+
+      // Cache de elementos del formulario CAMPO (ajusta los IDs si difieren)
+      // ✅ Cache de elementos del formulario CAMPO
+      const el = {
+        // Campos de captura rápida
+        tipo: document.getElementById("ec-tipo"),
+        nombre: document.getElementById("ec-nombre"),
+        telefono: document.getElementById("ec-telefono"),
+        seccion:
+          document.getElementById("ec-seccion") ||
+          document.getElementById("si-sec") ||
+          document.querySelector('[name="seccion"]'),
+        ambito:
+          document.getElementById("ec-ambito") ||
+          document.getElementById("si-ambito") ||
+          document.querySelector('[name="ambito"]'),
+
+        dom:
+          document.getElementById("ec-domicilio") ||
+          document.getElementById("ec-dom") ||
+          document.querySelector('[name="domicilio"]'),
+        obs: document.getElementById("ec-obs"),
+
+        // Botones de interacción
+        gps: document.getElementById("ec-gps"),
+        mapa: document.getElementById("ec-mapa"),
+        geocode: document.getElementById("ec-geocode"),
+        guardar: document.getElementById("ec-guardar"),
+        exportar: document.getElementById("ec-export"),
+        copiar: document.getElementById("ec-copiar"),
+        limpiar: document.getElementById("ec-limpiar"),
+
+        // Panel administrativo
+        adminUrl: document.getElementById("ec-admin-url"),
+        adminCargar: document.getElementById("ec-admin-cargar"),
+        adminLimpiar: document.getElementById("ec-admin-limpiar"),
+        adminPins: document.getElementById("ec-admin-pins"),
+        adminSavePins: document.getElementById("ec-admin-save-pins"),
+
+        // Contador / KPIs
+        contador: document.getElementById("ec-contador") ||
+          document.getElementById("ct-contador") || { textContent: "" },
+      };
+
+      // HEYTI: solo etiquetas de botones (no cambia lógica ni handlers)
+      (() => {
+        const btnCopiar = document.getElementById("ec-copiar");
+        if (btnCopiar) {
+          btnCopiar.textContent = "Copiar GeoJSON";
+          btnCopiar.title = "Copia el GeoJSON al portapapeles";
+        }
+        const btnExport = document.getElementById("ec-export");
+        if (btnExport) {
+          btnExport.textContent = "Descargar GeoJSON";
+          btnExport.title = "Descarga un archivo .geojson con tus puntos";
+        }
+      })();
+
+      // HEYTI: máscara en vivo para teléfono MX (10 dígitos)
+      if (el?.telefono) {
+        el.telefono.addEventListener("input", () => {
+          const d = el.telefono.value.replace(/\D+/g, "").slice(0, 10);
+          let f = d;
+          if (d.length > 6)
+            f = `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`;
+          else if (d.length > 3) f = `${d.slice(0, 3)} ${d.slice(3)}`;
+          el.telefono.value = f;
+        });
+        el.telefono.addEventListener("paste", (e) => {
+          e.preventDefault();
+          const d = (e.clipboardData.getData("text") || "")
+            .replace(/\D+/g, "")
+            .slice(0, 10);
+          el.telefono.value = d;
+          el.telefono.dispatchEvent(new Event("input"));
+        });
+      }
+
+      /* =======================
+    ESTRATEGICO · Módulo CAMPO
+    Namespace: E27Campo
+    ======================= */
+      const E27Campo = (() => {
+        // --- Config ---
+        // Base key; las claves finales serán BASE_STORAGE_KEY_{PIN} para aislar
+        // capturas por promotor. Si no hay PIN activo se usa la clave base.
+        const BASE_STORAGE_KEY = "estrategico_campo_registros_v1";
+        const LAYER_ID = "estrategico-campo-layer";
+        const colorByTipo = {
+          SIMPATIZANTE: "#1e88e5", // azul
+          LIDER: "#2e7d32", // verde
+          ADVERSARIO: "#e53935", // rojo
+          "REPRESENTANTE DE CASILLA": "#8e24aa", // morado
+          "REPRESENTANTE GENERAL": "#fdd835", // amarillo
+          REP_CASILLA: "#8e24aa", // alias
+          REP_GENERAL: "#fdd835", // alias
+          OBSERVADOR: "#9e9e9e", // gris
+          OTRO: "#000000", // negro
+        };
+
+        // --- Estado ---
+        let registros = loadLocal();
+        // Mantener referencia global para herramientas externas y debugging
+        window.registros = registros;
+        let pickingOnMap = false;
+        // Catálogo territorial (municipios)
+        let municipioCatalog = {};
+        async function loadCatalogoTerritorial() {
+          try {
+            const resp = await fetch("../data/catalogo_territorial.json", {
+              cache: "no-store",
+            });
+            const j = await resp.json();
+            municipioCatalog = j.municipios || j.municipios || {};
+          } catch (e) {
+            console.warn("No se pudo cargar catalogo_territorial.json:", e);
+            municipioCatalog = {};
+          }
+        }
+        function getMunicipioName(code) {
+          if (!code && code !== 0) return "";
+          const k = String(code || "").replace(/^0+/, "") || String(code);
+          return (
+            municipioCatalog[k] ||
+            municipioCatalog[String(code)] ||
+            String(code || "")
+          );
+        }
+        const layerGroup = L.layerGroup().addTo(atMap());
+        layerGroup._estrategicoId = LAYER_ID;
+
+        // --- UI refs ---
+        const $ = (sel) => document.querySelector(sel);
+        // Preferimos el botón real '#btn-campo'; si no existe, fallback a selector previo
+        const launcher =
+          document.getElementById("btn-campo") ||
+          $("#estrategico-campo-launcher");
+        const panel = $("#estrategico-campo-panel");
+        const btnCerrar = $("#ec-btn-cerrar");
+        const tabs = document.querySelectorAll(".ec-tab");
+        const tabCaptura = $("#ec-tab-captura");
+        const tabAdmin = $("#ec-tab-admin");
+
+        // --- Init (deferred until DOM esté listo) ---
+        function startCampoModule() {
+          try {
+            updateCounter();
+            redrawLayer();
+            wireUI();
+            // Cargar catálogo territorial (para nombre de municipio)
+            try {
+              loadCatalogoTerritorial();
+            } catch (e) {
+              /* noop */
+            }
+            // actualizar nombre de archivo de export visible
+            try {
+              setExportFilenameUI();
+            } catch (e) {
+              /* noop */
+            }
+          } catch (e) {
+            console.warn("Error inicializando módulo CAMPO:", e);
+          }
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", startCampoModule, {
+            once: true,
+          });
+        } else {
+          startCampoModule();
+        }
+
+        // renderKpis definida más abajo (usa la variable interna `registros`)
+
+        // === HELPERS: localizar la sección por coordenada y llenar el form ===
+        function findSectionFeatureForPoint(lat, lng) {
+          const raw = window.AT_DATA;
+          if (!raw?.features?.length || !window.turf) return null;
+          const pt = turf.point([lng, lat]);
+          // Usa el universo filtrado si existe; si no, recorre todo el geojson
+          const feats =
+            window.AT_CTX?.layer?.toGeoJSON?.()?.features || raw.features;
+          for (const f of feats) {
+            try {
+              if (turf.booleanPointInPolygon(pt, f)) return f;
+            } catch (_) {}
+          }
+          return null;
+        }
+
+        // Forzar mayúsculas en ciertos inputs (visual + valor real)
+        function enforceUppercaseOn(el) {
+          if (!el) return;
+          // visual
+          el.style.textTransform = "uppercase";
+          const onInput = (e) => {
+            try {
+              const start = el.selectionStart;
+              const end = el.selectionEnd;
+              const up = el.value.toUpperCase();
+              if (up !== el.value) el.value = up;
+              // Restaurar caret si es posible
+              if (typeof start === "number" && typeof end === "number") {
+                el.setSelectionRange(start, end);
+              }
+            } catch (err) {
+              // algunos elementos (p. ej. no-input) pueden fallar
+            }
+          };
+          el.addEventListener("input", onInput);
+          el.addEventListener("blur", onInput);
+        }
+
+        function setUbicacionFormAuto({ lat, lng }) {
+          const $seccion = document.getElementById("ec-seccion");
+          const $ambito = document.getElementById("ec-ambito");
+          const $dl = document.getElementById("ec-dl");
+          const $df = document.getElementById("ec-df");
+          const $muni = document.getElementById("ec-muni");
+          if (!$seccion || !$ambito) return null;
+
+          // Guardamos las coordenadas en el dataset del elemento
+          $seccion.dataset.lat = lat;
+          $seccion.dataset.lng = lng;
+
+          const feat = findSectionFeatureForPoint(lat, lng);
+          if (feat) {
+            const p = feat.properties || {};
+            const muni = p.MUNICIPIO ?? p.MUN ?? "";
+            const dl = p.DISTRITO_L ?? p.DL ?? "";
+            const df = p.DISTRITO_F ?? p.DF ?? "";
+
+            $seccion.value = p.SECCION ?? "";
+            $seccion.dataset.lat = lat;
+            $seccion.dataset.lng = lng;
+            $ambito.value = `MUN:${muni} · DL:${dl} · DF:${df}`;
+            if ($dl) $dl.value = dl;
+            if ($df) $df.value = df;
+            if ($muni) $muni.value = muni;
+            return { p, feat };
+          } else {
+            $seccion.dataset.lat = lat;
+            $seccion.dataset.lng = lng;
+            $ambito.value = "";
+            if ($dl) $dl.value = "";
+            if ($df) $df.value = "";
+            if ($muni) $muni.value = "";
+            return null;
+          }
+        }
+
+        (function wireCampoButton() {
+          function start() {
+            const btn = document.getElementById("btn-campo");
+            if (!btn) {
+              console.warn("[CT-27] No encontré #btn-campo");
+              return;
+            }
+            const sel =
+              btn.getAttribute("data-target") || "#estrategico-campo-panel";
+            const panel = document.querySelector(sel);
+            if (!panel) {
+              console.warn("[CT-27] No encontré panel", sel);
+              return;
+            }
+
+            // si antes usabas window.launcher, reasígnalo para no romper otros códigos
+            window.launcher = btn;
+
+            btn.addEventListener("click", (e) => {
+              e.preventDefault();
+              const hidden = panel.classList.toggle("ec-hidden"); // necesita .ec-hidden {display:none}
+              btn.setAttribute("aria-expanded", String(!hidden));
+            });
+          }
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", start, {
+              once: true,
+            });
+          } else {
+            start();
+          }
+        })();
+
+        // --- Functions ---
+        function wireUI() {
+          // Utilidad para agregar listeners de forma segura
+          const safeOn = (el, evt, fn) => {
+            if (el) {
+              el.addEventListener(evt, fn);
+            } else {
+              console.warn(`Elemento no encontrado para evento '${evt}'`);
+            }
+          };
+
+          // Botones principales
+          safeOn(launcher, "click", () => panel.classList.toggle("ec-hidden"));
+          safeOn(btnCerrar, "click", () => panel.classList.add("ec-hidden"));
+
+          // Tabs
+          // tabs es un NodeList; comprobamos longitud en lugar de Array.isArray
+          if (tabs && tabs.length) {
+            tabs.forEach((t) =>
+              safeOn(t, "click", () => {
+                tabs.forEach((x) => x.classList.remove("ec-tab-active"));
+                t.classList.add("ec-tab-active");
+                const tab = t.dataset.tab;
+                tabCaptura?.classList.toggle("ec-hidden", tab !== "captura");
+                tabAdmin?.classList.toggle("ec-hidden", tab !== "admin");
+              })
+            );
+          } else {
+            console.warn("No se encontraron tabs");
+          }
+
+          // Acciones del formulario
+          safeOn(el.mapa, "click", activarPickEnMapa);
+          safeOn(el.gps, "click", captureByGPS);
+          safeOn(el.geocode, "click", geocodeAddressStub);
+
+          safeOn(el.guardar, "click", onGuardar);
+          safeOn(el.exportar, "click", onExportar);
+          safeOn(el.copiar, "click", onCopiar);
+          safeOn(el.limpiar, "click", limpiarForm);
+
+          // Panel administrativo
+          safeOn(el.adminCargar, "click", adminCargarGeoJSON);
+          // HEYTI: limpiar capa + selección + recentrar mapa
+          safeOn?.(el?.adminLimpiar, "click", () => {
+            try {
+              layerGroup?.clearLayers?.();
+            } catch {}
+            try {
+              // limpiar dataset lat/lng del selector de sección
+              if (el?.seccion) {
+                delete el.seccion.dataset.lat;
+                delete el.seccion.dataset.lng;
+              }
+            } catch {}
+            // Nota: `#ct-pin` es el modal de PIN (DOM), no una capa de Leaflet.
+            // La limpieza del mapa ya ocurre con `layerGroup.clearLayers()`.
+            try {
+              // recentrar a MX
+              const m = atMap?.();
+              m?.setView?.([23.6345, -102.5528], 5);
+            } catch {}
+            try {
+              redrawLayer?.();
+            } catch {}
+            try {
+              toast?.("Capa y selección limpiadas.");
+            } catch {}
+          });
+
+          // Guardar PINs (admin)
+          safeOn(el.adminSavePins, "click", () => {
+            const v = el.adminPins?.value?.trim() || "";
+            if (!v) {
+              alert("Escribe uno o varios PINs separados por coma.");
+              return;
+            }
+            // Guardamos tal cual; la lectura acepta lista separada por comas
+            localStorage.setItem("CT27_PIN", v);
+            toast("PINs guardados.");
+          });
+
+          // Forzar mayúsculas en los campos de texto relevantes
+          try {
+            enforceUppercaseOn(document.getElementById("ec-nombre"));
+            enforceUppercaseOn(document.getElementById("ec-dom"));
+            enforceUppercaseOn(document.getElementById("ec-ambito"));
+            enforceUppercaseOn(document.getElementById("ec-obs"));
+          } catch (e) {
+            console.warn("No se pudieron aplicar mayúsculas a inputs:", e);
+          }
+        }
+
+        function activarPickEnMapa() {
+          pickingOnMap = true;
+          launcher.title = "Haz clic en el mapa para fijar la ubicación";
+          atMap().once("click", async (e) => {
+            pickingOnMap = false;
+            const { lat, lng } = e.latlng;
+            setUbicacionFormAuto({ lat, lng });
+            dibujarPuntoTemporal(lat, lng);
+          });
+        }
+
+        // GPS
+        function captureByGPS() {
+          if (!navigator.geolocation) {
+            alert("Este dispositivo no permite GPS.");
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              setUbicacionFormAuto({ lat, lng });
+              dibujarPuntoTemporal(lat, lng);
+              atMap().setView([lat, lng], 18);
+            },
+            (err) => alert("No fue posible obtener GPS: " + err.message),
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        }
+
+        // Geocodificar domicilio (STUB) -> reemplaza por tu servicio real
+        async function geocodeAddressStub() {
+          const q = el.dom.value?.trim();
+          if (!q) {
+            alert("Escribe un domicilio.");
+            return;
+          }
+
+          const prefer = ""; // ej. ', León, Guanajuato, México'
+          const url =
+            "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=" +
+            encodeURIComponent(q + prefer);
+          try {
+            const r = await fetch(url, {
+              headers: { "Accept-Language": "es" },
+            });
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            const arr = await r.json();
+            if (!arr.length) {
+              alert("No se encontró el domicilio.");
+              return;
+            }
+            const best = arr[0];
+            const lat = parseFloat(best.lat),
+              lng = parseFloat(best.lon);
+            setUbicacionFormAuto({ lat, lng });
+            dibujarPuntoTemporal(lat, lng);
+            atMap().setView([lat, lng], 18);
+          } catch (e) {
+            alert("Geocodificador no disponible: " + e.message);
+          }
+        }
+
+        // Dibuja punto temporal (sólo vista)
+        function dibujarPuntoTemporal(lat, lng) {
+          L.circleMarker([lat, lng], {
+            radius: 7,
+            color: "#444",
+            weight: 1,
+            fillOpacity: 0.8,
+          }).addTo(layerGroup);
+        }
+
+        // Inferir sección (ajusta con tu índice espacial/prop ya existente)
+        function inferirSeccionDesdeMapa(lat, lng) {
+          // Sugerencia: si ya tienes 'capasPorSeccion' o una spatial index, úsala aquí.
+          // De momento, devolvemos vacío para no romper flujo:
+          try {
+            // Ejemplo (si tienes un layer de secciones con pointInPolygon):
+            // const sec = buscarSeccionPorPunto(lat, lng); return sec?.props?.SECCION || '';
+            return "";
+          } catch {
+            return "";
+          }
+        }
+
+        function setUbicacionForm({ lat, lng, seccion }) {
+          el.seccion.value = seccion || el.seccion.value || "";
+          el.seccion.dataset.lat = lat;
+          el.seccion.dataset.lng = lng;
+        }
+
+        function buildFeatureFromForm() {
+          const lat = parseFloat(
+            document.getElementById("ec-seccion")?.dataset.lat || ""
+          );
+          const lng = parseFloat(
+            document.getElementById("ec-seccion")?.dataset.lng || ""
+          );
+          const tipo = (
+            document.getElementById("ec-tipo")?.value || "OTRO"
+          ).toUpperCase();
+
+          const seccion = document.getElementById("ec-seccion")?.value || "";
+          const dl = document.getElementById("ec-dl")?.value || "";
+          const df = document.getElementById("ec-df")?.value || "";
+          const muni = document.getElementById("ec-muni")?.value || "";
+
+          const nombre = document.getElementById("ec-nombre")?.value || "";
+          const dom = document.getElementById("ec-dom")?.value || "";
+
+          const props = {
+            ID: crypto.randomUUID(),
+            TS: new Date().toISOString(),
+            TIPO: tipo, // SIMPATIZANTE/LIDER/...
+            SECCION: seccion,
+            DISTRITO_L: dl,
+            DISTRITO_F: df,
+            MUNICIPIO: muni,
+            MUNICIPIO_NOMBRE: getMunicipioName(muni),
+
+            NOMBRE: nombre,
+            DOMICILIO: dom,
+
+            ORIGEN: "CT-27",
+            ESTATUS: "ACTIVO",
+          };
+
+          const geom =
+            isFinite(lat) && isFinite(lng)
+              ? {
+                  type: "Point",
+                  coordinates: [lng, lat],
+                }
+              : null;
+
+          return { type: "Feature", geometry: geom, properties: props };
+        }
+
+        // Lectura segura de inputs por ID (string vacío si no existe)
+        function v(id) {
+          return (document.getElementById(id)?.value || "").trim();
+        }
+        function dnum(id) {
+          return parseFloat(document.getElementById(id)?.value || "");
+        }
+        function dset(id, key) {
+          return document.getElementById(id)?.dataset?.[key];
+        }
+
+        function normalizePhone(s) {
+          const d = (s || "").replace(/\D+/g, "");
+          return d.length >= 10 ? d : ""; // o exige 10 si lo prefieres
+        }
+
+        function onGuardar() {
+          // Helpers cortos
+          const v = (id) => (document.getElementById(id)?.value || "").trim();
+          const dset = (id, key) => document.getElementById(id)?.dataset?.[key];
+          const telefonoRaw = v("ec-telefono"); // lectura cruda del input
+
+          const now = new Date().toISOString();
+          const tipo = (v("ec-tipo") || "OTRO").toUpperCase();
+
+          // Tu UI actual
+          const nombre = (v("ec-nombre") || "").toUpperCase(); // un solo campo (forzar mayúsculas)
+          const telefono = normalizePhone(telefonoRaw);
+
+          // Validación: si el usuario escribió algo pero la normalización no
+          // produjo al menos 10 dígitos, no permitimos guardar.
+          if (telefonoRaw && !telefono) {
+            alert("Teléfono inválido: escribe al menos 10 dígitos numéricos.");
+            return;
+          }
+          const seccion = v("ec-seccion");
+          const ambito = v("ec-ambito");
+          const dl = v("ec-dl");
+          const df = v("ec-df");
+          const muni = v("ec-muni");
+
+          const lat = parseFloat(dset("ec-seccion", "lat") || "");
+          const lng = parseFloat(dset("ec-seccion", "lng") || "");
+
+          const dom = (v("ec-dom") || "").toUpperCase(); // domicilio (mayúsculas)
+          const obs = (v("ec-obs") || "").toUpperCase();
+
+          // Validaciones mínimas
+          if (!isFinite(lat) || !isFinite(lng)) {
+            alert("Falta ubicar el punto (GPS / Mapa / Geocodificar).");
+            return;
+          }
+          if (!seccion) {
+            alert(
+              "No se detectó la SECCIÓN. Asegúrate de fijar el punto dentro de una sección."
+            );
+            return;
+          }
+
+          const feature = {
+            type: "Feature",
+            properties: {
+              ID: crypto.randomUUID(),
+              TS: now,
+              ORIGEN: "CT-27",
+              ESTATUS: "ACTIVO",
+
+              // Rol y datos básicos
+              TIPO: tipo,
+              NOMBRE: nombre, // (singular, como tu UI)
+              TELEFONO: telefono,
+              DOMICILIO: dom,
+              // PIN del promotor que abrió el módulo (si existe)
+              PROMOTOR_PIN:
+                sessionStorage.getItem("CT27_PROMOTOR_PIN") ||
+                window.CT27_PROMOTOR_PIN ||
+                null,
+
+              // Ámbito para ET-27
+              SECCION: seccion,
+              DISTRITO_L: dl,
+              DISTRITO_F: df,
+              MUNICIPIO: muni,
+              MUNICIPIO_NOMBRE: getMunicipioName(muni),
+              AMBITO: ambito,
+
+              // Observaciones
+              OBS: obs,
+            },
+            geometry: { type: "Point", coordinates: [lng, lat] },
+          };
+
+          // Persistir y refrescar
+          registros.push(feature);
+          // mantener la referencia global para otras utilidades
+          window.registros = registros;
+          saveLocal(registros);
+          redrawLayer();
+          updateCounter();
+
+          // Notificar a ET-27 (una sola vez)
+          window.dispatchEvent(
+            new CustomEvent("ct27:recordSaved", { detail: feature })
+          );
+
+          // Limpiar datasets de coords para evitar duplicados por error
+          const elSeccion = document.getElementById("ec-seccion");
+          if (elSeccion) {
+            delete elSeccion.dataset.lat;
+            delete elSeccion.dataset.lng;
+          }
+
+          toast("Registro guardado localmente.");
+        }
+
+        function renderKpis() {
+          const box = document.getElementById("ec-kpis");
+          if (!box) return;
+          const byTipo = {};
+          registros.forEach((f) => {
+            const t = f.properties?.TIPO || "OTRO";
+            byTipo[t] = (byTipo[t] || 0) + 1;
+          });
+
+          const ultimos = registros
+            .slice(-5)
+            .reverse()
+            .map((f) => {
+              const p = f.properties || {};
+              return `${(p.TIPO || "-").slice(0, 12)} · ${p.SECCION || "-"}`;
+            });
+
+          const pill = (
+            label,
+            n,
+            color = "#eee"
+          ) => `<span style="padding:4px 8px;border-radius:999px;border:1px solid #ddd;background:#fafafa">
+          <b>${label}</b>: ${n}</span>`;
+
+          box.innerHTML = `
+          ${Object.entries(byTipo)
+            .map(([k, v]) => pill(k, v))
+            .join(" ")}
+          <div style="flex-basis:100%;height:0"></div>
+          <small style="color:#666">Últimos: ${ultimos.join(" · ")}</small>
+        `;
+        }
+        function updateCounter() {
+          const elTotal =
+            document.querySelector(".ec-contador") ||
+            document.getElementById("ec-contador");
+          if (elTotal) elTotal.textContent = (registros || []).length;
+          // sincronizar referencia global para herramientas externas
+          window.registros = registros;
+          if (typeof renderKpis === "function") renderKpis();
+        }
+
+        function redrawLayer() {
+          // Limpia sólo los marcadores "nuestros" (dejamos otros layers intactos).
+          layerGroup.clearLayers();
+          // Dibuja locales:
+          registros.forEach((f) => {
+            const [lng, lat] = f.geometry.coordinates;
+            const tipo = f.properties.TIPO;
+            const color = colorByTipo[tipo] || "#37474f";
+            L.circleMarker([lat, lng], {
+              radius: 7,
+              color,
+              weight: 1,
+              fillOpacity: 0.9,
+            })
+              .bindPopup(popupHtml(f))
+              .addTo(layerGroup);
+          });
+        }
+
+        function popupHtml(f) {
+          const p = f.properties || {};
+          return `
+        <div style="min-width:200px">
+          <div><strong>Nombre:</strong> ${p.NOMBRE || "-"}</div>
+          <div><strong>Teléfono:</strong> ${p.TELEFONO || "-"}</div>
+          <div><strong>Tipo de Asignación:</strong> ${p.TIPO || "-"}</div>
+          <div style="font-size:11px;color:#888">Creado: ${
+            p.CREATED_AT || ""
+          }</div>
+        </div>
+      `;
+        }
+
+        function onExportar() {
+          const fc = { type: "FeatureCollection", features: registros };
+          const blob = new Blob([JSON.stringify(fc, null, 2)], {
+            type: "application/geo+json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          // Nombre que incorpora el PIN activo y la fecha para evitar sobrescrituras
+          const pin =
+            sessionStorage.getItem("CT27_PROMOTOR_PIN") ||
+            window.CT27_PROMOTOR_PIN ||
+            "no-pin";
+          const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+          a.download = `puntos_campo_${pin}_${fecha}.geojson`;
+          a.href = url;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        // Devuelve el nombre que usará la exportación (sin crear el blob)
+        function getExportFilename() {
+          const pin =
+            sessionStorage.getItem("CT27_PROMOTOR_PIN") ||
+            window.CT27_PROMOTOR_PIN ||
+            "no-pin";
+          const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+          return `puntos_campo_${pin}_${fecha}.geojson`;
+        }
+
+        function setExportFilenameUI() {
+          try {
+            const el = document.getElementById("ec-export-name");
+            if (!el) return;
+            el.textContent = getExportFilename();
+          } catch (e) {
+            /* noop */
+          }
+          // Actualizar nombre de export visible
+          try {
+            setExportFilenameUI();
+          } catch (e) {
+            /* noop */
+          }
+        }
+
+        function onCopiar() {
+          const fc = { type: "FeatureCollection", features: registros };
+          navigator.clipboard
+            .writeText(JSON.stringify(fc))
+            .then(() => toast("GeoJSON copiado al portapapeles."))
+            .catch(() => alert("No se pudo copiar."));
+        }
+
+        function limpiarForm() {
+          ["nombre", "telefono", "seccion", "ambito", "obs", "dom"].forEach(
+            (id) => {
+              el[id].value = "";
+            }
+          );
+          delete el.seccion.dataset.lat;
+          delete el.seccion.dataset.lng;
+        }
+
+        async function adminCargarGeoJSON() {
+          const url = el.adminUrl.value?.trim();
+          if (!url) {
+            alert("Pega una URL RAW de GeoJSON.");
+            return;
+          }
+          try {
+            const resp = await fetch(url, { cache: "no-store" });
+            const data = await resp.json();
+            // dibuja capa externa
+            L.geoJSON(data, {
+              pointToLayer: (feat, latlng) => {
+                const t = feat.properties?.TIPO || "";
+                const color = colorByTipo[t] || "#37474f";
+                return L.circleMarker(latlng, {
+                  radius: 6,
+                  color,
+                  weight: 1,
+                  fillOpacity: 0.8,
+                });
+              },
+              onEachFeature: (feat, layer) => layer.bindPopup(popupHtml(feat)),
+            }).addTo(layerGroup);
+            toast("Capa cargada.");
+          } catch (e) {
+            alert("No se pudo cargar el GeoJSON: " + e.message);
+          }
+        }
+
+        // --- Persistencia ---
+        // Key de almacenamiento según PIN activo. Si no hay PIN se usa la
+        // clave base (comportamiento histórico).
+        function getStorageKeyForActivePin() {
+          try {
+            const pin =
+              sessionStorage.getItem("CT27_PROMOTOR_PIN") ||
+              window.CT27_PROMOTOR_PIN ||
+              null;
+            if (pin) return `${BASE_STORAGE_KEY}_${String(pin)}`;
+            return BASE_STORAGE_KEY; // coordinador / sin PIN
+          } catch (e) {
+            return BASE_STORAGE_KEY;
+          }
+        }
+
+        function loadLocal() {
+          try {
+            const key = getStorageKeyForActivePin();
+            return JSON.parse(localStorage.getItem(key)) || [];
+          } catch {
+            return [];
+          }
+        }
+
+        function saveLocal(arr) {
+          const key = getStorageKeyForActivePin();
+          localStorage.setItem(key, JSON.stringify(arr));
+        }
+
+        // Permite recargar registros cuando cambia el PIN activo
+        function reloadRegistrosForActivePin() {
+          registros = loadLocal();
+          window.registros = registros;
+          redrawLayer();
+          updateCounter();
+          // Actualizar badge del launcher si existe
+          try {
+            const btn = document.getElementById("btn-campo");
+            if (btn) {
+              const n = (registros || []).length;
+              btn.innerHTML = ` <i class="fa fa-map-marker-alt"></i>  Módulo CAMPO
+        ${
+          n > 0
+            ? `<span style="
+          background:#fff;color:#4a90e2;font-weight:700;
+          margin-left:6px;padding:2px 8px;border-radius:10px;
+          font-size:13px;">${n}</span>`
+            : ""
+        }`;
+            }
+          } catch (e) {
+            /* noop */
+          }
+        }
+
+        // Escuchar evento que indica cambio de PIN (emitted por pinGateSafe)
+        window.addEventListener("ct27:pinChanged", () => {
+          try {
+            reloadRegistrosForActivePin();
+          } catch (e) {
+            console.warn("ct27:pinChanged handler failed:", e);
+          }
+        });
+
+        // --- Helpers ---
+        function toast(msg) {
+          console.log("[CAMPO]", msg);
+        }
+
+        // API pública opcional
+        return {
+          getRegistros: () => [...registros],
+          setRegistros: (arr) => {
+            registros = Array.isArray(arr) ? arr : [];
+            saveLocal(registros);
+            redrawLayer();
+            updateCounter();
+          },
+        };
+      })();
+
+      (function pinGateSafe() {
+        // Ejecuta cuando el DOM esté listo (por si el script está en <head> o antes del modal)
+        function start() {
+          const modal = document.getElementById("ct-pin");
+          const inp = document.getElementById("ct-pin-i");
+          const ok = document.getElementById("ct-pin-ok");
+
+          // Si falta el modal, no hacemos nada (evita el error de .style)
+          if (!modal || !inp || !ok) {
+            console.warn("[CT-27] PIN modal no encontrado; se omite pinGate.");
+            return;
+          }
+
+          // Si no hay PINs configurados, pre-populamos localStorage con dos PINs
+          // para facilitar pruebas (2701 y 1234). Esto solo establece el valor
+          // si la clave no existe todavía.
+          if (!localStorage.getItem("CT27_PIN")) {
+            localStorage.setItem("CT27_PIN", "2701,1234");
+          }
+          // Leemos PINs desde localStorage. Puede ser un solo PIN o una lista separada por comas.
+          const pinsStr = localStorage.getItem("CT27_PIN") || "2701";
+          const pins = pinsStr
+            .split(",")
+            .map((s) => String(s || "").trim())
+            .filter(Boolean);
+
+          // Mostrar sólo si no hay sesión validada
+          if (!sessionStorage.getItem("CT27_UNLOCK")) {
+            modal.style.display = "flex";
+            setTimeout(() => inp.focus(), 50);
+          }
+
+          ok.addEventListener(
+            "click",
+            () => {
+              const val = String(inp.value || "").trim();
+              const matched = pins.find((p) => p === val);
+              if (matched) {
+                // Guardamos el PIN usado para que pueda asociarse a los registros
+                window.CT27_PROMOTOR_PIN = matched;
+                sessionStorage.setItem("CT27_PROMOTOR_PIN", matched);
+                sessionStorage.setItem("CT27_UNLOCK", "1");
+                modal.style.display = "none";
+                // Avisamos al módulo CAMPO que cambió el PIN para recargar datos
+                try {
+                  window.dispatchEvent(new Event("ct27:pinChanged"));
+                } catch (e) {
+                  console.warn("No se pudo dispatch ct27:pinChanged", e);
+                }
+                alert("Acceso concedido");
+              } else {
+                alert("PIN incorrecto");
+              }
+            },
+            { once: false }
+          );
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", start, { once: true });
+        } else {
+          start();
+        }
+      })();
+
+      const launcher = document.getElementById("btn-campo");
+      if (launcher) {
+        launcher.addEventListener("click", (e) => {
+          try {
+            const sel =
+              launcher.getAttribute("data-target") ||
+              "#estrategico-campo-panel";
+            const pnl = document.querySelector(sel);
+            if (pnl) pnl.classList.toggle("ec-hidden");
+          } catch (err) {
+            console.warn("toggle panel failed:", err);
+          }
+        });
+      }
+
+      // === Drag del panel CT (por header) ===
+      function enableDragPanel(
+        panelSel = "#estrategico-campo-panel",
+        handleSel = ".ec-header"
+      ) {
+        const panel = document.querySelector(panelSel);
+        const handle = panel?.querySelector(handleSel);
+        if (!panel || !handle) return;
+
+        let sx = 0,
+          sy = 0,
+          px = panel.offsetLeft,
+          py = panel.offsetTop,
+          dragging = false;
+
+        function onDown(e) {
+          if (AT_isDockedPanel(panel)) return;
+          dragging = true;
+          const p = "touches" in e ? e.touches[0] : e;
+          sx = p.clientX - panel.offsetLeft;
+          sy = p.clientY - panel.offsetTop;
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+          document.addEventListener("touchmove", onMove, { passive: false });
+          document.addEventListener("touchend", onUp);
+        }
+
+        function updateCampoBadge() {
+          const n = (window.registros || []).length;
+          const btn = document.getElementById("btn-campo");
+          if (!btn) return;
+          btn.innerHTML = `<i class="fa fa-map-marker-alt"></i>  Módulo CAMPO
+        ${
+          n > 0
+            ? `<span style="
+          background:#fff;color:#7b1b2b;font-weight:700;
+          margin-left:6px;padding:2px 8px;border-radius:10px;
+          font-size:13px;">${n}</span>`
+            : ""
+        }`;
+        }
+        // Llama esta función después de cada guardado:
+        updateCampoBadge();
+
+        function onMove(e) {
+          if (!dragging) return;
+          const p = "touches" in e ? e.touches[0] : e;
+          px = p.clientX - sx;
+          py = p.clientY - sy;
+          // límites simples para no perder el panel
+          const W = window.innerWidth,
+            H = window.innerHeight;
+          const w = panel.offsetWidth,
+            h = panel.offsetHeight;
+          px = Math.max(8, Math.min(px, W - w - 8));
+          py = Math.max(8, Math.min(py, H - h - 8));
+          panel.style.left = px + "px";
+          panel.style.top = py + "px";
+          panel.style.right = "auto";
+          panel.style.bottom = "auto";
+          e.preventDefault?.();
+        }
+        function onUp() {
+          dragging = false;
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          document.removeEventListener("touchmove", onMove);
+          document.removeEventListener("touchend", onUp);
+        }
+        handle.addEventListener("mousedown", onDown);
+        handle.addEventListener("touchstart", onDown, { passive: false });
+      }
+      // Llamada
+      enableDragPanel();
+
+      const OF_BASE_POINTS_URL = "../data/geo/df3_base_operativa.geojson";
+
+
+      // ===============================
+      // CAMPO-OFICINA · Generador de rutas
+      // ===============================
+      const OFICINA = {
+        baseFC: null,
+        bySec: new Map(),       // sec -> features[]
+        secOrder: [],           // lista ordenada de secciones
+        secCentroid: new Map(), // sec -> [lng,lat]
+        resumen: [],            // filas para CSV
+        rutas: []               // [{rutaId, parejaId, features}]
+      };
+
+
+      // ===============================
+// RED VIAL CAMPO · Carga y toggle
+// ===============================
+const OF_ROAD_URL = "../data/geo/red_vial_leon.geojson";
+let OF_ROAD_LAYER = null;
+let OF_ROAD_LOADED = false;
+let OF_ROAD_VISIBLE = false;
+
+async function ofLoadRoadNetwork(){
+  try{
+    if (OF_ROAD_LOADED && OF_ROAD_LAYER) return OF_ROAD_LAYER;
+
+    const m = (typeof atMap === "function") ? atMap() : (window.__AT_MAP || null);
+    if (!m) throw new Error("Mapa no disponible para cargar red vial.");
+
+    const res = await fetch(OF_ROAD_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status} al cargar ${OF_ROAD_URL}`);
+
+    const geo = await res.json();
+    if (!geo || geo.type !== "FeatureCollection"){
+      throw new Error("La red vial no es un FeatureCollection válido.");
+    }
+
+    OF_ROAD_LAYER = L.geoJSON(geo, {
+      style: function(){
+        return {
+          color: "#7f8c8d",
+          weight: 1,
+          opacity: 0.45
+        };
+      },
+      interactive: false
+    });
+
+    OF_ROAD_LOADED = true;
+    return OF_ROAD_LAYER;
+  }catch(err){
+    console.error("[RED VIAL] Error cargando red:", err);
+    ofMsg(`❌ Error al cargar red vial: ${err.message || err}`);
+    return null;
+  }
+  }
+
+
+    let ROAD_GRAPH = null;
+
+    function buildRoadGraph() {
+      if (!OF_ROAD_LAYER) return null;
+
+      const nodes = {};
+      const edges = {};
+      const segments = [];
+
+      function nodeId(coord) {
+        const c = coord2D(coord);
+        if (!c) return null;
+        return c[0].toFixed(6) + "," + c[1].toFixed(6);
+      }
+
+      OF_ROAD_LAYER.eachLayer(layer => {
+        const gj = layer.toGeoJSON();
+        if (!gj || !gj.geometry) return;
+
+        const geom = gj.geometry;
+
+        let lines = [];
+        if (geom.type === "LineString") {
+          lines = [geom.coordinates];
+        } else if (geom.type === "MultiLineString") {
+          lines = geom.coordinates;
+        } else {
+          return;
+        }
+
+        lines.forEach(coords => {
+          for (let i = 0; i < coords.length - 1; i++) {
+            const a = coord2D(coords[i]);
+            const b = coord2D(coords[i + 1]);
+
+            if (!a || !b) continue;
+
+            const idA = nodeId(a);
+            const idB = nodeId(b);
+
+            if (!idA || !idB) continue;
+
+            if (!nodes[idA]) nodes[idA] = a;
+            if (!nodes[idB]) nodes[idB] = b;
+
+            const d = haversineMeters(a, b);
+
+            edges[idA] = edges[idA] || [];
+            edges[idB] = edges[idB] || [];
+
+            edges[idA].push({ to: idB, dist: d });
+            edges[idB].push({ to: idA, dist: d });
+
+            segments.push({
+              a,
+              b,
+              idA,
+              idB,
+              dist: d
+            });
+          }
+        });
+      });
+
+      ROAD_GRAPH = { nodes, edges, segments };
+
+      console.log("ROAD GRAPH construido:", Object.keys(nodes).length, "nodos");
+      console.log("ROAD GRAPH segmentos:", segments.length);
+
+      return ROAD_GRAPH;
+    }
+
+
+    function bridgeNearbyRoadNodesFast(maxDistMeters = 8) {
+        if (!ROAD_GRAPH || !ROAD_GRAPH.nodes || !ROAD_GRAPH.edges) return;
+
+        const nodeIds = Object.keys(ROAD_GRAPH.nodes);
+        const cellSize = 0.00012; // aprox 10 a 13 metros, suficiente para prueba
+        const grid = {};
+        let bridges = 0;
+
+        function cellKey(coord) {
+          const lng = coord[0];
+          const lat = coord[1];
+          const x = Math.floor(lng / cellSize);
+          const y = Math.floor(lat / cellSize);
+          return `${x},${y}`;
+        }
+
+        // 1. guardar nodos terminales en una rejilla
+        for (const id of nodeIds) {
+          const coord = ROAD_GRAPH.nodes[id];
+          const degree = (ROAD_GRAPH.edges[id] || []).length;
+
+          // solo nodos con pocas conexiones
+          if (degree > 2) continue;
+
+          const key = cellKey(coord);
+          if (!grid[key]) grid[key] = [];
+          grid[key].push(id);
+        }
+
+        // 2. revisar vecinos cercanos por celdas
+        const checked = new Set();
+
+        for (const key in grid) {
+          const [x, y] = key.split(",").map(Number);
+
+          const nearbyIds = [];
+
+          for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+              const neighborKey = `${x + dx},${y + dy}`;
+              if (grid[neighborKey]) {
+                nearbyIds.push(...grid[neighborKey]);
+              }
+            }
+          }
+
+          const localIds = grid[key];
+
+          for (const idA of localIds) {
+            const coordA = ROAD_GRAPH.nodes[idA];
+
+            for (const idB of nearbyIds) {
+              if (idA === idB) continue;
+
+              const pairKey = idA < idB ? `${idA}|${idB}` : `${idB}|${idA}`;
+              if (checked.has(pairKey)) continue;
+              checked.add(pairKey);
+
+              const alreadyConnected = (ROAD_GRAPH.edges[idA] || []).some(e => e.to === idB);
+              if (alreadyConnected) continue;
+
+              const coordB = ROAD_GRAPH.nodes[idB];
+              const d = haversineMeters(coordA, coordB);
+
+              if (d > 0 && d <= maxDistMeters) {
+                ROAD_GRAPH.edges[idA].push({ to: idB, dist: d });
+                ROAD_GRAPH.edges[idB].push({ to: idA, dist: d });
+                bridges++;
+              }
+            }
+          }
+        }
+
+        console.log("[ROAD GRAPH] puentes agregados:", bridges);
+      }
+
+
+
+
+      function graphNodeId(coord){
+        return coord[0].toFixed(6) + "," + coord[1].toFixed(6);
+      }
+
+
+    async function ofToggleRoadNetwork(){
+      const btn = document.getElementById("of-btn-red-vial");
+      const m = (typeof atMap === "function") ? atMap() : (window.__AT_MAP || null);
+      if (!m) return;
+
+      const layer = await ofLoadRoadNetwork();
+      if (!layer) return;
+
+      if (!OF_ROAD_VISIBLE){
+        layer.addTo(m);
+        OF_ROAD_VISIBLE = true;
+        if (btn) btn.textContent = "Ocultar red vial";
+        ofMsg("🛣️ Red vial visible en el mapa.");
+      } else {
+        try { m.removeLayer(layer); } catch(_){}
+        OF_ROAD_VISIBLE = false;
+        if (btn) btn.textContent = "Mostrar red vial";
+        ofMsg("🛣️ Red vial oculta.");
+      }
+    }
+
+      function ofSaveRoutesForTerritorio(rutas, meta){
+          // Guarda TODO lo que necesita otro módulo para “mostrar rutas”
+          // (sin backend) → localStorage
+          const payload = {
+            meta: meta || {},
+            rutas: rutas.map(r => ({
+              rutaId: r.rutaId,
+              parejaId: r.parejaId,
+              featureCollection: { type:"FeatureCollection", features: r.features }
+            }))
+          };
+          localStorage.setItem("AT_CAMPO_RUTAS_GENERADAS", JSON.stringify(payload));
+        }
+
+
+      // ====== Capa de rutas en mapa (OFICINA) ======
+        let OF_ROUTE_LAYER = null;
+
+        function ofClearRouteLayer(){
+          try{
+            const m = (typeof atMap === "function") ? atMap() : (window.__AT_MAP || null);
+            if (!m) return;
+            if (OF_ROUTE_LAYER){
+              m.removeLayer(OF_ROUTE_LAYER);
+              OF_ROUTE_LAYER = null;
+            }
+          }catch(e){ console.warn(e); }
+        }
+
+
+        function coord2D(coord) {
+          if (!Array.isArray(coord) || coord.length < 2) return null;
+          return [Number(coord[0]), Number(coord[1])];
+        }
+
+
+
+
+        function ofShowRouteOnMap(featureCollection){
+          try{
+            const m = (typeof atMap === "function") ? atMap() : (window.__AT_MAP || null);
+            if (!m) return;
+
+            ofClearRouteLayer();
+
+            const coords = (featureCollection.features || [])
+              .map(f => f?.geometry?.type === "Point" ? f.geometry.coordinates : null)
+              .filter(c => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]));
+
+            let ordered = coords.slice();
+
+            if (coords.length >= 2){
+              ordered = orderPointsNearestNeighbor(coords);
+              ordered = twoOptImprove(ordered, 40);
+
+              ordered.forEach((c, i) => {
+                if (featureCollection.features[i]) {
+                  featureCollection.features[i].properties = featureCollection.features[i].properties || {};
+                  featureCollection.features[i].properties.__order = i + 1;
+                }
+              });
+            }
+
+            OF_ROUTE_LAYER = L.geoJSON(featureCollection, {
+              pointToLayer: (f, latlng) => {
+                const idx = f.properties?.__order ?? "";
+
+                return L.marker(latlng, {
+                  zIndexOffset: 200,
+                  icon: L.divIcon({
+                    className: "marker-num",
+                    html: `<div class="marker-num-inner">${idx}</div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                  })
+                });
+              },
+              onEachFeature: (f, layer) => {
+                const p = f.properties || {};
+                const nom = p.NOMBRE || p.nombre || "";
+                const tel = p.TELEFONO || p.telefono || "";
+                const dom = p.DOMICILIO || p.dom || p.DIRECCION || p.CALLE || "";
+                const sec = p.SECCION || p.seccion || "";
+                layer.bindPopup(
+                  `<b>${nom || "—"}</b><br/>${dom || ""}<br/>Tel: ${tel || "—"}<br/>Sección: ${sec || "—"}`
+                );
+              }
+            }).addTo(m);
+
+            // aquí ya NO dibujas la línea azul vieja
+
+            try{
+              const b = OF_ROUTE_LAYER.getBounds();
+              if (b && b.isValid()) m.fitBounds(b.pad(0.12));
+              setTimeout(() => {
+                if (m.getZoom() < 19) m.setZoom(19);
+              }, 100);
+            }catch(_){}
+          }catch(e){
+            console.error("[OFICINA] No pude pintar ruta en mapa:", e);
+          }
+        }
+
+        // ====== Rutas: ordenar puntos y crear línea ======
+        function haversineMeters(a, b){
+          const toRad = (x)=> x * Math.PI/180;
+          const R = 6371000;
+          const dLat = toRad(b[1]-a[1]);
+          const dLon = toRad(b[0]-a[0]);
+          const lat1 = toRad(a[1]);
+          const lat2 = toRad(b[1]);
+          const s = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+          return 2*R*Math.asin(Math.sqrt(s));
+        }
+
+        function orderPointsNearestNeighbor(coords){
+          if (!coords || coords.length <= 2) return coords || [];
+          const used = new Array(coords.length).fill(false);
+          const out = [];
+
+          // arranque: primer punto
+          let cur = 0;
+          used[cur] = true;
+          out.push(coords[cur]);
+
+          for (let step=1; step<coords.length; step++){
+            let best = -1;
+            let bestD = Infinity;
+            for (let i=0;i<coords.length;i++){
+              if (used[i]) continue;
+              const d = haversineMeters(coords[cur], coords[i]);
+              if (d < bestD){ bestD = d; best = i; }
+            }
+            used[best] = true;
+            out.push(coords[best]);
+            cur = best;
+          }
+          return out;
+        }
+
+        // 2-opt simple (mejora la ruta)
+        function twoOptImprove(routeCoords, maxIter=60){
+          if (!routeCoords || routeCoords.length < 4) return routeCoords;
+          const dist = (r, i, j) => haversineMeters(r[i], r[j]);
+          let r = routeCoords.slice();
+
+          const totalLen = (arr)=>{
+            let s=0;
+            for (let i=0;i<arr.length-1;i++) s += haversineMeters(arr[i], arr[i+1]);
+            return s;
+          };
+
+          let bestLen = totalLen(r);
+
+          for (let iter=0; iter<maxIter; iter++){
+            let improved = false;
+            for (let i=1; i<r.length-2; i++){
+              for (let k=i+1; k<r.length-1; k++){
+                // swap edges (i-1,i) and (k,k+1)
+                const a = i-1, b = i, c = k, d = k+1;
+                const cur = dist(r,a,b) + dist(r,c,d);
+                const alt = dist(r,a,c) + dist(r,b,d);
+                if (alt + 1e-6 < cur){
+                  // reverse segment [i..k]
+                  const rev = r.slice(i, k+1).reverse();
+                  r.splice(i, k-i+1, ...rev);
+                  improved = true;
+                }
+              }
+            }
+            const lenNow = totalLen(r);
+            if (lenNow + 1e-6 < bestLen){
+              bestLen = lenNow;
+              improved = true;
+            }
+            if (!improved) break;
+          }
+          return r;
+        }
+
+
+      function of$(id){ return document.getElementById(id); }
+
+      function ofInitUI(){
+        const fecha = of$("of-fecha");
+        if (fecha && !fecha.value){
+          // hoy local
+          const d = new Date();
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth()+1).padStart(2,"0");
+          const dd = String(d.getDate()).padStart(2,"0");
+          fecha.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+
+        of$("of-btn-cargar")?.addEventListener("click", ofLoadBaseFromURL);
+        of$("of-btn-descargar-resumen")?.addEventListener("click", ofDownloadResumenCSV);
+        of$("of-btn-red-vial")?.addEventListener("click", ofToggleRoadNetwork);
+
+        (function initBotonRutaInteligenteOF(){
+          const btn = document.getElementById("btn-oficina-ruta-inteligente");
+          if (!btn) return;
+
+          btn.addEventListener("click", async () => {
+            try{
+              btn.disabled = true;
+              btn.textContent = "⏳ Generando ruta...";
+
+              if (typeof ofGenerateRoutes === "function") {
+                await ofGenerateRoutes();
+              } else {
+                console.warn("[OFICINA] No encontré la función ofGenerateRoutes()");
+              }
+
+            } catch (e){
+              console.error("[OFICINA] Error al generar ruta inteligente:", e);
+            } finally {
+              btn.disabled = false;
+              btn.textContent = "🧭 Generar Ruta Inteligente";
+            }
+          });
+        })();
+
+        setTimeout(() => {
+          ofLoadBaseFromURL();
+        }, 0);
+
+      }
+      ofInitUI();
+
+      function ofMsg(html){
+        const out = of$("of-out");
+        if (!out) return;
+        const div = document.createElement("div");
+        div.innerHTML = html;
+        out.appendChild(div);
+      }
+
+      function ofClearOut(){
+        const out = of$("of-out");
+        if (out) out.innerHTML = "";
+      }
+
+      function readFileAsText(file){
+        return new Promise((resolve,reject)=>{
+          const fr = new FileReader();
+          fr.onload = ()=>resolve(fr.result);
+          fr.onerror = ()=>reject(fr.error);
+          fr.readAsText(file);
+        });
+      }
+
+      function ensureProp(f, key, val){
+        if (!f.properties) f.properties = {};
+        if (f.properties[key] == null || f.properties[key] === "") f.properties[key] = val;
+      }
+
+      function genPointId(f){
+        // 1) Si el navegador soporta crypto.randomUUID → ID único real
+        if (window.crypto && typeof crypto.randomUUID === "function"){
+          return "PT_" + crypto.randomUUID();
+        }
+
+        // 2) Fallback determinístico (hash) usando coords + atributos
+        const p = f.properties || {};
+        const g = f.geometry || {};
+        const c = Array.isArray(g.coordinates) ? g.coordinates : [];
+        const seed = [
+          c[0], c[1],
+          p.NOMBRE || p.nombre || "",
+          p.TELEFONO || p.telefono || "",
+          p.DOMICILIO || p.dom || ""
+        ].join("|");
+
+        let h = 0;
+        for (let i=0;i<seed.length;i++){
+          h = (h<<5) - h + seed.charCodeAt(i);
+          h |= 0;
+        }
+        return "PT_" + Math.abs(h);
+      }
+
+      function featureToLonLat(f){
+        if (!f || !f.geometry) return null;
+        if (f.geometry.type === "Point") {
+          const [lng,lat] = f.geometry.coordinates || [];
+          if (Number.isFinite(lng) && Number.isFinite(lat)) return [lng,lat];
+        }
+        return null;
+      }
+
+      function computeCentroidForSection(features){
+        // centroid aproximado (promedio) de puntos
+        let sx=0, sy=0, n=0;
+        for (const f of features){
+          const ll = featureToLonLat(f);
+          if (!ll) continue;
+          sx += ll[0]; sy += ll[1]; n++;
+        }
+        if (!n) return null;
+        return [sx/n, sy/n];
+      }
+
+      function dist2(a,b){
+        const dx = a[0]-b[0];
+        const dy = a[1]-b[1];
+        return dx*dx + dy*dy;
+      }
+
+
+      async function ofAssignSeccionFromPolygons(pointsFC, fieldSec = "SECCION") {
+        // Usa la misma ruta de secciones que ya maneja tu app
+        // (si tu variable se llama distinto, ajusta urlGeo / URL_SECC)
+        const seccUrl = (typeof urlGeo !== "undefined" && urlGeo) ? urlGeo : (window.URL_SECC || "../data/geo/secciones.geojson");
+
+        const res = await fetch(seccUrl);
+        if (!res.ok) throw new Error("No pude cargar secciones.geojson para asignar SECCION");
+        const seccFC = await res.json();
+
+        if (!seccFC || seccFC.type !== "FeatureCollection") {
+          throw new Error("secciones.geojson no es FeatureCollection válido");
+        }
+
+        // Índice simple: recorre secciones y asigna por contención
+        let asignados = 0;
+        let sinCoord = 0;
+
+        for (const pf of pointsFC.features) {
+          if (!pf || !pf.geometry || pf.geometry.type !== "Point") { sinCoord++; continue; }
+          if (!pf.properties) pf.properties = {};
+
+          const secVal = String(pf.properties[fieldSec] ?? "").trim();
+          if (secVal) continue; // ya trae sección
+
+          const pt = turf.point(pf.geometry.coordinates);
+
+          let found = null;
+          for (const sf of seccFC.features) {
+            if (!sf || !sf.geometry) continue;
+            // Ajusta aquí si tu polígono trae el campo con otro nombre
+            const sec = String(sf.properties?.SECCION ?? sf.properties?.SECC ?? sf.properties?.SEC ?? "").trim();
+            if (!sec) continue;
+
+            if (turf.booleanPointInPolygon(pt, sf)) {
+              found = sec;
+              break;
+            }
+          }
+
+          if (found) {
+            pf.properties[fieldSec] = found;
+            asignados++;
+          }
+        }
+
+        return { asignados, sinCoord, seccUrl };
+      }
+
+
+
+      async function ofLoadBaseFromFile(){
+        ofClearOut();
+
+        const inp = of$("of-file-base");
+        if (!inp || !inp.files || !inp.files[0]){
+          ofMsg("⚠️ Selecciona el <b>GeoJSON base</b> (df3_base_operativa.geojson).");
+          return;
+        }
+
+        const fieldSec = (of$("of-field-seccion")?.value || "SECCION").trim();
+        const fieldId  = (of$("of-field-id")?.value || "PUNTO_ID").trim();
+
+        try{
+          const txt = await readFileAsText(inp.files[0]);
+          const json = JSON.parse(txt);
+
+          const fc = (json && json.type === "FeatureCollection") ? json : null;
+          if (!fc || !Array.isArray(fc.features)){
+            throw new Error("El archivo no parece ser FeatureCollection válido.");
+          }
+
+
+          // Si SECCION viene vacío, intentamos autollenarlo con secciones.geojson (Turf)
+          const previewMissing = fc.features.slice(0, 50).filter(f => {
+            const p = f.properties || {};
+            const sec = String(p[fieldSec] ?? p.SECCION ?? p.seccion ?? "").trim();
+            return !sec;
+          }).length;
+
+          if (previewMissing > 0) {
+            ofMsg(`🧩 Detecté SECCION vacío en puntos. Intentando asignar SECCION automáticamente...`);
+            const r = await ofAssignSeccionFromPolygons(fc, fieldSec);
+            ofMsg(`✅ SECCION asignada a <b>${r.asignados}</b> puntos (usando ${r.seccUrl}).`);
+          }
+
+
+
+          // Normalizar
+          OFICINA.baseFC = fc;
+          OFICINA.bySec = new Map();
+          OFICINA.secCentroid = new Map();
+          OFICINA.resumen = [];
+          OFICINA.rutas = [];
+
+          let sinSec = 0;
+          let total = 0;
+
+          for (const f of fc.features){
+            total++;
+            const p = f.properties || {};
+            const sec = String(p[fieldSec] ?? p.SECCION ?? p.seccion ?? "").trim();
+
+            if (!sec){ sinSec++; continue; }
+
+            // ID
+            if (!p[fieldId]) ensureProp(f, fieldId, genPointId(f));
+
+            if (!OFICINA.bySec.has(sec)) OFICINA.bySec.set(sec, []);
+            OFICINA.bySec.get(sec).push(f);
+          }
+
+          // Lista de secciones
+          OFICINA.secOrder = Array.from(OFICINA.bySec.keys()).sort((a,b)=>a.localeCompare(b));
+
+          // centroides por sección
+          for (const sec of OFICINA.secOrder){
+            const c = computeCentroidForSection(OFICINA.bySec.get(sec));
+            if (c) OFICINA.secCentroid.set(sec, c);
+          }
+
+          // poblar select
+          const sel = of$("of-sec-origen");
+          if (sel){
+            sel.innerHTML = `<option value="">— Selecciona —</option>` + OFICINA.secOrder
+              .map(s=>`<option value="${s}">${s} (${OFICINA.bySec.get(s).length} pts)</option>`)
+              .join("");
+          }
+
+          // habilitar
+          of$("of-btn-generar").disabled = false;
+
+          ofMsg(`✅ Base cargada: <b>${total.toLocaleString()}</b> puntos · <b>${OFICINA.secOrder.length}</b> secciones.`);
+          if (sinSec) ofMsg(`⚠️ Puntos sin sección (${fieldSec} vacío): <b>${sinSec}</b> (se omitieron).`);
+
+          // preparar resumen inicial
+          OFICINA.resumen = OFICINA.secOrder.map(sec=>({
+            SECCION: sec,
+            PUNTOS: OFICINA.bySec.get(sec).length
+          }));
+
+          of$("of-btn-descargar-resumen").disabled = false;
+
+        }catch(err){
+          console.error(err);
+          ofMsg(`❌ Error: ${err.message || err}`);
+        }
+      }
+
+
+      async function ofLoadBaseFromURL(){
+        ofClearOut();
+
+        const fieldSec = (of$("of-field-seccion")?.value || "SECCION").trim();
+        const fieldId  = (of$("of-field-id")?.value || "PUNTO_ID").trim();
+
+        try{
+          const res = await fetch(OF_BASE_POINTS_URL);
+          if (!res.ok) throw new Error(`HTTP ${res.status} al cargar ${OF_BASE_POINTS_URL}`);
+
+          const json = await res.json();
+          const fc = (json && json.type === "FeatureCollection") ? json : null;
+
+          if (!fc || !Array.isArray(fc.features)){
+            throw new Error("El GeoJSON base no es FeatureCollection válido.");
+          }
+
+          // Si SECCION viene vacío, intentamos asignarlo con polígonos
+          const previewMissing = fc.features.slice(0, 50).filter(f => {
+            const p = f.properties || {};
+            const sec = String(p[fieldSec] ?? p.SECCION ?? p.seccion ?? "").trim();
+            return !sec;
+          }).length;
+
+          if (previewMissing > 0) {
+            ofMsg(`🧩 Detecté SECCION vacío en puntos. Intentando asignar SECCION automáticamente...`);
+            const r = await ofAssignSeccionFromPolygons(fc, fieldSec);
+            ofMsg(`✅ SECCION asignada a <b>${r.asignados}</b> puntos.`);
+          }
+
+          // Domicilio en memoria si hace falta
+          if (typeof ofBuildDomicilioInGeoJSON === "function"){
+            const nDom = ofBuildDomicilioInGeoJSON(fc);
+            ofMsg(`🏠 DOMICILIO construido/normalizado en <b>${nDom}</b> puntos.`);
+          }
+
+          OFICINA.baseFC = fc;
+          OFICINA.bySec = new Map();
+          OFICINA.secCentroid = new Map();
+          OFICINA.resumen = [];
+          OFICINA.rutas = [];
+
+          let sinSec = 0;
+          let total = 0;
+
+          for (const f of fc.features){
+            total++;
+            const p = f.properties || {};
+            const sec = String(p[fieldSec] ?? p.SECCION ?? p.seccion ?? "").trim();
+
+            if (!sec){ sinSec++; continue; }
+
+            if (!p[fieldId]) ensureProp(f, fieldId, genPointId(f));
+
+            if (!OFICINA.bySec.has(sec)) OFICINA.bySec.set(sec, []);
+            OFICINA.bySec.get(sec).push(f);
+          }
+
+          OFICINA.secOrder = Array.from(OFICINA.bySec.keys()).sort((a,b)=>a.localeCompare(b));
+
+          for (const sec of OFICINA.secOrder){
+            const c = computeCentroidForSection(OFICINA.bySec.get(sec));
+            if (c) OFICINA.secCentroid.set(sec, c);
+          }
+
+          const sel = of$("of-sec-origen");
+          if (sel){
+            sel.innerHTML = `<option value="">— Selecciona —</option>` + OFICINA.secOrder
+              .map(s=>`<option value="${s}">${s} (${OFICINA.bySec.get(s).length} pts)</option>`)
+              .join("");
+          }
+
+          of$("of-btn-generar").disabled = false;
+          of$("of-btn-descargar-resumen").disabled = false;
+
+          ofMsg(`✅ Base cargada automáticamente: <b>${total.toLocaleString()}</b> puntos · <b>${OFICINA.secOrder.length}</b> secciones.`);
+          if (sinSec) ofMsg(`⚠️ Puntos sin sección: <b>${sinSec}</b> (omitidos).`);
+
+          OFICINA.resumen = OFICINA.secOrder.map(sec=>({
+            SECCION: sec,
+            PUNTOS: OFICINA.bySec.get(sec).length
+          }));
+
+        }catch(err){
+          console.error(err);
+          ofMsg(`❌ Error al cargar base automática: ${err.message || err}`);
+        }
+      }
+
+
+      function isValidLngLat(coord){
+        return Array.isArray(coord)
+          && coord.length >= 2
+          && Number.isFinite(coord[0])
+          && Number.isFinite(coord[1]);
+      }
+
+      // Distancia aproximada en metros entre dos coords [lng,lat]
+        function haversineMeters(a, b){
+          if (!isValidLngLat(a) || !isValidLngLat(b)) return Infinity;
+          const toRad = x => x * Math.PI/180;
+          const R = 6371000;
+          const dLat = toRad(b[1]-a[1]);
+          const dLon = toRad(b[0]-a[0]);
+          const lat1 = toRad(a[1]), lat2 = toRad(b[1]);
+          const s = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+          return 2*R*Math.asin(Math.sqrt(s));
+        }
+
+        // Proyecta p sobre el segmento a-b (todo en [lng,lat] tratado como plano local)
+        function projectPointOnSegment(p, a, b){
+          const ax=a[0], ay=a[1], bx=b[0], by=b[1], px=p[0], py=p[1];
+          const abx = bx-ax, aby = by-ay;
+          const apx = px-ax, apy = py-ay;
+          const ab2 = abx*abx + aby*aby;
+          if (ab2 === 0) return a;
+          let t = (apx*abx + apy*aby) / ab2;
+          t = Math.max(0, Math.min(1, t));
+          return [ax + t*abx, ay + t*aby];
+        }
+
+   function pickSectionsNearOrigin(originSec, targetPoints){
+        // Nuevo criterio operativo:
+        // SOLO usar la sección seleccionada.
+        // Sin adyacentes. Sin completar con otras secciones.
+        if (!originSec || !OFICINA.bySec.has(originSec)) return [];
+        return [originSec];
+      }
+
+      function chunk(arr, size){
+        const out = [];
+        for (let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size));
+        return out;
+      }
+
+      function downloadBlob(filename, content, mime){
+        const blob = new Blob([content], {type: mime || "application/octet-stream"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=>{
+          URL.revokeObjectURL(a.href);
+          a.remove();
+        }, 500);
+      }
+
+      function toCSV(rows){
+        if (!rows || !rows.length) return "";
+        const cols = Object.keys(rows[0]);
+        const esc = (v)=> `"${String(v ?? "").replace(/"/g,'""')}"`;
+        const head = cols.map(esc).join(",");
+        const body = rows.map(r=>cols.map(c=>esc(r[c])).join(",")).join("\n");
+        return head + "\n" + body;
+      }
+
+      function snapPointToRoad(pointLngLat) {
+        if (!ROAD_GRAPH || !ROAD_GRAPH.segments || !ROAD_GRAPH.segments.length) return null;
+
+        const pt = coord2D(pointLngLat);
+        if (!pt) return null;
+
+        let best = {
+          coord: null,
+          dist: Infinity,
+          a: null,
+          b: null,
+          idA: null,
+          idB: null,
+          nodeId: null
+        };
+
+        for (const seg of ROAD_GRAPH.segments) {
+          const a = seg.a; // [lng, lat]
+          const b = seg.b; // [lng, lat]
+
+          const proj = projectPointOnSegment(pt, a, b);
+          const d = haversineMeters(pt, proj);
+
+          if (d < best.dist) {
+            const dA = haversineMeters(proj, a);
+            const dB = haversineMeters(proj, b);
+            const chosenNodeId = dA <= dB ? seg.idA : seg.idB;
+
+            best.coord = proj;
+            best.dist = d;
+            best.a = a;
+            best.b = b;
+            best.idA = seg.idA;
+            best.idB = seg.idB;
+            best.nodeId = chosenNodeId;
+          }
+        }
+
+        return best.coord && best.nodeId ? best : null;
+      }
+
+
+
+    function testSnapOnFirstPoint(ruta){
+
+      if (!ruta || !ruta.features || !ruta.features.length) return;
+
+      const p = ruta.features[0].geometry.coordinates;
+
+      const snap = snapPointToRoad(p);
+      if (!snap) return;
+
+      const m = (typeof atMap === "function") ? atMap() : window.__AT_MAP;
+
+      // punto original
+      L.circleMarker([p[1], p[0]], {
+        radius:6,
+        color:"#e74c3c"
+      }).addTo(m).bindPopup("Punto original");
+
+      // punto ajustado a calle
+      L.circleMarker([snap.coord[1], snap.coord[0]], {
+        radius:6,
+        color:"#27ae60"
+      }).addTo(m).bindPopup(`Snap calle (${snap.dist.toFixed(1)} m)`);
+
+      // línea de ajuste
+      L.polyline([[p[1],p[0]],[snap.coord[1],snap.coord[0]]],{
+        color:"#3498db",
+        dashArray:"4,4"
+      }).addTo(m);
+    }
+
+    function drawSnappedRoutePoints(snappedPoints){
+      if (!snappedPoints || !snappedPoints.length) return;
+
+      const m = (typeof atMap === "function") ? atMap() : window.__AT_MAP;
+      if (!m) return;
+
+      // grupo para limpiar fácil después si luego quieres
+      window.__SNAP_ALL_LAYER = window.__SNAP_ALL_LAYER || L.layerGroup().addTo(m);
+      window.__SNAP_ALL_LAYER.clearLayers();
+
+      for (const pt of snappedPoints){
+        const o = pt.original;
+        const s = pt.snapped;
+
+        // original (rojo)
+        L.circleMarker([o[1], o[0]], {
+          radius: 4,
+          color: "#e74c3c",
+          weight: 1
+        }).addTo(window.__SNAP_ALL_LAYER);
+
+        // snapped (verde)
+        L.circleMarker([s[1], s[0]], {
+          radius: 4,
+          color: "#27ae60",
+          weight: 1
+        }).addTo(window.__SNAP_ALL_LAYER)
+          .bindPopup(`Snap calle (${pt.dist.toFixed(1)} m)`);
+
+        // línea de ajuste
+        L.polyline([[o[1],o[0]],[s[1],s[0]]],{
+          color:"#3498db",
+          dashArray:"4,4",
+          weight:1
+        }).addTo(window.__SNAP_ALL_LAYER);
+      }
+    }
+
+      function snapAllRoutePoints(ruta) {
+        if (!ruta || !ruta.features || !ruta.features.length) return [];
+
+        const snapped = [];
+
+        for (const f of ruta.features) {
+          if (!f.geometry || f.geometry.type !== "Point") continue;
+
+          const p = coord2D(f.geometry.coordinates); // <- normaliza [lng,lat,z] a [lng,lat]
+          if (!p) {
+            console.warn("[SNAP ALL] coordenada inválida:", f.geometry.coordinates);
+            continue;
+          }
+
+          const snap = snapPointToRoad(p);
+
+          if (!snap || !snap.coord || !snap.nodeId) {
+            console.warn("[SNAP ALL] punto sin snap válido:", f.geometry.coordinates);
+            continue;
+          }
+
+          snapped.push({
+            original: p,
+            snapped: snap.coord,
+            dist: snap.dist,
+            a: snap.a,
+            b: snap.b,
+            idA: snap.idA,
+            idB: snap.idB,
+            nodeId: snap.nodeId,
+            properties: f.properties || {}
+          });
+        }
+
+        console.log("[SNAP ALL] puntos ajustados:", snapped.length, snapped);
+
+        return snapped;
+      }
+
+
+
+      function featuresToSimpleCSV(features){
+        const pick = (p, keys) => {
+          for (const k of keys){
+            const v = p?.[k];
+            if (v != null && String(v).trim() !== "") return v;
+          }
+          return "";
+        };
+
+        const joinClean = (...vals) => vals
+          .map(v => String(v ?? "").trim())
+          .filter(v => v && v !== "-" && v.toLowerCase() !== "null")
+          .join(", ");
+
+        const buildDomicilio = (p) => {
+          // 1) si existe un campo directo, úsalo
+          const direct = pick(p, [
+            "DOMICILIO","domicilio","dom","DIRECCION","direccion","DIRECCIÓN","DIRECION","ADDRESS",
+            "DOMICILIO_CORTO","domicilio_corto","DIR","dir","CALLE_Y_NUM","calle_y_num"
+          ]);
+          if (String(direct).trim()) return direct;
+
+          // 2) si viene por partes, lo armamos
+          const calle   = pick(p, ["CALLE","calle","Calle","STREET","street","VIALIDAD","vialidad"]);
+          const num     = pick(p, ["NUMERO","numero","NUM","num","NO","no","NÚM","NUM_EXT","num_ext","EXT","ext","INTERIOR","interior"]);
+          const col     = pick(p, ["COLONIA","colonia","Colonia","FRACC","fracc","ASENTAMIENTO","asentamiento","BARRIO","barrio"]);
+          const mun     = pick(p, ["MUNICIPIO","municipio","Municipio","MUN","mun"]);
+          const cp      = pick(p, ["CP","cp","C.P.","COD_POSTAL","cod_postal","ZIP","zip"]);
+          const ref     = pick(p, ["REFERENCIA","referencia","REF","ref","ENTRE_CALLES","entre_calles","OBS_DOM","obs_dom"]);
+
+          const base = joinClean(
+            joinClean(calle, num),
+            col,
+            joinClean(mun, cp)
+          );
+
+          return joinClean(base, ref);
+        };
+
+        const rows = features.map(f=>{
+          const p = f.properties || {};
+          return {
+            SECCION: pick(p, ["SECCION","seccion","SEC","SECC","CVE_SECC"]),
+            CVE: pick(p, ["CVE","cve","CLAVE","clave","CVE_ELECTOR","ELECTOR","ID_ELECTOR","FOLIO","ID","id"]),
+            NOMBRE: pick(p, ["NOMBRE","nombre","NOM","PERSONA","CIUDADANO"]),
+            DOMICILIO: buildDomicilio(p),
+            TELEFONO: pick(p, ["TELEFONO","telefono","TEL","CEL","CELULAR","MOVIL"])
+          };
+        });
+
+        return toCSV(rows);
+      }
+
+      function ofGenerateRoutes(){
+        ofClearOut();
+
+        if (! OFICINA.baseFC || !OFICINA.bySec.size){
+          ofMsg("⚠️ Primero carga la base.");
+          return;
+        }
+
+        const origin = of$("of-sec-origen")?.value?.trim();
+        if (!origin){
+          ofMsg("⚠️ Selecciona la <b>sección origen</b>.");
+          return;
+        }
+
+        const fecha = of$("of-fecha")?.value || "";
+        const meta = Number(of$("of-meta")?.value || 60);
+        const targetSec = Number(of$("of-target-sec")?.value || 120);
+        const numParejas = Number(of$("of-num-parejas")?.value || 1);
+
+        // 1) elegir secciones operativas (≈120 pts)
+        const secs = pickSectionsNearOrigin(origin, targetSec);
+
+        // 2) juntar puntos de esas secciones
+        let pool = [];
+        for (const sec of secs){
+          pool = pool.concat(OFICINA.bySec.get(sec) || []);
+        }
+
+        // 3) (opcional) si hay demasiados, recortar a parejas*meta
+        const totalTarget = Math.max(1, numParejas) * Math.max(10, meta);
+        if (pool.length > totalTarget){
+          pool = pool.slice(0, totalTarget);
+        }
+
+        // 4) crear rutas de meta puntos
+        const parts = chunk(pool, Math.max(10, meta));
+        OFICINA.rutas = [];
+
+        const basePrefix = `DF3_${origin}`;
+        let idx = 1;
+
+        for (const part of parts){
+          const rutaId = `${basePrefix}_R${String(idx).padStart(3,"0")}`;
+          const parejaId = `P${String(idx).padStart(2,"0")}`;
+
+          for (const f of part){
+            if (!f.properties) f.properties = {};
+            f.properties.RUTA_ID = rutaId;
+            f.properties.PAREJA_ID = parejaId;
+            if (fecha) f.properties.FECHA_JORNADA = fecha;
+            // marcadores iniciales
+            if (!f.properties.VALIDACION) f.properties.VALIDACION = "";
+            if (!f.properties.ESTADO_VISITA) f.properties.ESTADO_VISITA = "pendiente";
+          }
+
+          OFICINA.rutas.push({ rutaId, parejaId, features: part });
+          idx++;
+        }
+
+        // 5) Render output con botones de descarga
+        ofMsg(`✅ Sección de trabajo: <b>${secs.join(", ")}</b>`);
+        if (pool.length < meta){
+          ofMsg(`⚠️ La sección tiene <b>${pool.length}</b> puntos, menor a la meta de <b>${meta}</b>. La brigada deberá complementar visitas en campo.`);
+        }
+        ofMsg(`✅ Puntos en pool: <b>${pool.length.toLocaleString()}</b> · Rutas generadas: <b>${OFICINA.rutas.length}</b> (meta ${meta} c/u)`);
+
+        // construir resumen
+        const resumen = [];
+        for (const r of OFICINA.rutas){
+          resumen.push({
+            RUTA_ID: r.rutaId,
+            PAREJA_ID: r.parejaId,
+            FECHA_JORNADA: fecha,
+            ORIGEN_SECCION: origin,
+            SECCIONES_USADAS: secs.join("|"),
+            PUNTOS: r.features.length
+          });
+        }
+        OFICINA.resumenRutas = resumen;
+
+
+        // 1) Mostrar la primera ruta en el mapa (como vista previa)
+        if (OFICINA.rutas.length){
+          const fcPrev = { type:"FeatureCollection", features: OFICINA.rutas[0].features };
+          ofShowRouteOnMap(fcPrev);
+        }
+
+        // 2) Guardar rutas para CAMPO-TERRITORIO (localStorage)
+        ofSaveRoutesForTerritorio(OFICINA.rutas, {
+          origen: origin,
+          fecha,
+          metaPorPareja: meta,
+          targetPorSeccion: targetSec
+        });
+
+        ofMsg(`🗺️ Ruta previa mostrada en el mapa. (Se guardaron ${OFICINA.rutas.length} rutas para CAMPO-TERRITORIO)`);
+
+        // botones por ruta
+        for (const r of OFICINA.rutas){
+          const fnGeo = `${r.rutaId}_${fecha || "SINFECHA"}_ruta.geojson`;
+          const fnCsv = `${r.rutaId}_${fecha || "SINFECHA"}_lista.csv`;
+
+          const fc = { type:"FeatureCollection", features: r.features };
+          const geoTxt = JSON.stringify(fc, null, 2);
+          const csvTxt = featuresToSimpleCSV(r.features);
+
+          ofMsg(`
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <span style="font-weight:700">${r.rutaId}</span>
+              <span style="color:#64748b">(${r.features.length} pts)</span>
+              <button class="ec-btn" type="button" data-dl="geo" data-id="${r.rutaId}">Descargar GeoJSON</button>
+              <button class="ec-btn" type="button" data-dl="csv" data-id="${r.rutaId}">Descargar CSV</button>
+            </div>
+          `);
+
+          // attach handlers (delegación simple)
+          setTimeout(()=>{
+            const out = of$("of-out");
+            if (!out || out.__ofHandlers) return;
+            out.__ofHandlers = true;
+            out.addEventListener("click",(ev)=>{
+              const btn = ev.target?.closest?.("button[data-dl]");
+              if (!btn) return;
+              const kind = btn.getAttribute("data-dl");
+              const id = btn.getAttribute("data-id");
+              const rr = OFICINA.rutas.find(x=>x.rutaId===id);
+              if (!rr) return;
+
+              const fc2 = { type:"FeatureCollection", features: rr.features };
+              const geo2 = JSON.stringify(fc2, null, 2);
+              const csv2 = featuresToSimpleCSV(rr.features);
+
+              const fng = `${rr.rutaId}_${fecha || "SINFECHA"}_ruta.geojson`;
+              const fnc = `${rr.rutaId}_${fecha || "SINFECHA"}_lista.csv`;
+
+              if (kind==="geo") downloadBlob(fng, geo2, "application/geo+json");
+              if (kind==="csv") downloadBlob(fnc, csv2, "text/csv;charset=utf-8");
+            });
+          }, 0);
+        }
+
+        if (OFICINA.rutas && OFICINA.rutas.length){
+          // testSnapOnFirstPoint(OFICINA.rutas[0]);
+        }
+
+      if (OFICINA.rutas && OFICINA.rutas.length) {
+
+        buildRoadGraph();
+        bridgeNearbyRoadNodesFast(6);
+
+
+
+        console.log("[DEBUG] ROAD_GRAPH:", ROAD_GRAPH);
+        console.log("[DEBUG] segmentos:", ROAD_GRAPH?.segments?.length || 0);
+
+        const snapped = snapAllRoutePoints(OFICINA.rutas[0]);
+
+        drawSnappedRoutePoints(snapped);
+
+        console.log("[SNAP ALL] puntos ajustados:", snapped.length, snapped);
+
+        if (snapped.length >= 2) {
+
+          console.log("[DEBUG] start nodeId:", snapped[0].nodeId);
+          console.log("[DEBUG] end nodeId:", snapped[1].nodeId);
+
+          console.log("[DEBUG] start exists:", !!ROAD_GRAPH.nodes[snapped[0].nodeId]);
+          console.log("[DEBUG] end exists:", !!ROAD_GRAPH.nodes[snapped[1].nodeId]);
+
+          const testRoute = routeBetweenSnappedPoints(snapped[0], snapped[1]);
+
+          console.log("[DEBUG] testRoute length:", testRoute.length);
+          console.log("[DEBUG] testRoute:", testRoute);
+
+          const fullStreetRoute = buildFullStreetRouteFromSnapped(snapped);
+
+          console.log("[FULL ROUTE] puntos snappeados:", snapped.length);
+          console.log("[FULL ROUTE] nodos totales en ruta callejera:", fullStreetRoute.length, fullStreetRoute);
+
+          drawStreetRoute(fullStreetRoute);
+
+        } else {
+          console.warn("[FULL ROUTE] No hay suficientes puntos snappeados para trazar la ruta.");
+        }
+      }
+
+
+        // habilitar resumen rutas
+        of$("of-btn-descargar-resumen").disabled = false;
+        ofMsg(`📌 Tip: Envía cada <b>ruta.geojson</b> por WhatsApp a la pareja (y el CSV si lo quieres como hoja).`);
+      }
+
+      function ofDownloadResumenCSV(){
+        // si aún no hay rutas, descarga resumen por sección
+        if (OFICINA.resumenRutas && OFICINA.resumenRutas.length){
+          const csv = toCSV(OFICINA.resumenRutas);
+          downloadBlob(`resumen_rutas_${new Date().toISOString().slice(0,10)}.csv`, csv, "text/csv;charset=utf-8");
+          return;
+        }
+        if (OFICINA.resumen && OFICINA.resumen.length){
+          const csv = toCSV(OFICINA.resumen);
+          downloadBlob(`resumen_secciones_${new Date().toISOString().slice(0,10)}.csv`, csv, "text/csv;charset=utf-8");
+          return;
+        }
+        ofMsg("⚠️ No hay resumen para descargar todavía.");
+      }
+
+
+      function nearestGraphNode(coord){
+
+        if (!ROAD_GRAPH) return null;
+
+        let best = null;
+        let bestDist = Infinity;
+
+        const MAX_DIST = 40; // metros
+
+        for (const id in ROAD_GRAPH.nodes){
+
+          const n = ROAD_GRAPH.nodes[id];
+          const d = haversineMeters(coord,n);
+
+          if (d < bestDist && d < MAX_DIST){
+            bestDist = d;
+            best = id;
+          }
+        }
+
+        return best;
+      }
+
+
+      function shortestPath(startId, endId){
+        if (!ROAD_GRAPH || !ROAD_GRAPH.nodes[startId] || !ROAD_GRAPH.nodes[endId]) return [];
+
+        const dist = {};
+        const prev = {};
+        const visited = new Set();
+        const queue = [];
+
+        for (const id in ROAD_GRAPH.nodes){
+          dist[id] = Infinity;
+        }
+
+        dist[startId] = 0;
+        queue.push({ id: startId, d: 0 });
+
+        while (queue.length){
+          queue.sort((a,b) => a.d - b.d);
+          const { id } = queue.shift();
+
+          if (visited.has(id)) continue;
+          visited.add(id);
+
+          if (id === endId) break;
+
+          const neighbors = ROAD_GRAPH.edges[id] || [];
+
+          for (const n of neighbors){
+            const alt = dist[id] + n.dist;
+
+            if (alt < dist[n.to]){
+              dist[n.to] = alt;
+              prev[n.to] = id;
+              queue.push({ id: n.to, d: alt });
+            }
+          }
+        }
+
+        // 🔴 CLAVE: si nunca llegó al final, no devolvemos “ruta falsa”
+        if (dist[endId] === Infinity){
+          return [];
+        }
+
+        const path = [];
+        let u = endId;
+
+        while (u){
+          path.unshift(ROAD_GRAPH.nodes[u]);
+          u = prev[u];
+        }
+
+        return path;
+      }
+
+      function routeBetweenSnappedPoints(snapA, snapB) {
+        if (!snapA || !snapB) return [];
+        if (!ROAD_GRAPH || !ROAD_GRAPH.nodes || !ROAD_GRAPH.edges) return [];
+
+        const startCandidates = [snapA.idA, snapA.idB].filter(Boolean);
+        const endCandidates = [snapB.idA, snapB.idB].filter(Boolean);
+
+        let bestRoute = [];
+        let bestLen = Infinity;
+
+        for (const startId of startCandidates) {
+          for (const endId of endCandidates) {
+
+            if (!ROAD_GRAPH.nodes[startId] || !ROAD_GRAPH.nodes[endId]) continue;
+
+            const core = shortestPath(startId, endId);
+
+            if (!core || core.length === 0) continue;
+
+            const fullRoute = [];
+
+            // punto snappeado inicial
+            fullRoute.push(snapA.snapped);
+
+            // ruta del grafo
+            for (const p of core) {
+              fullRoute.push(p);
+            }
+
+            // punto snappeado final
+            fullRoute.push(snapB.snapped);
+
+            let total = 0;
+            for (let i = 0; i < fullRoute.length - 1; i++) {
+              total += haversineMeters(fullRoute[i], fullRoute[i + 1]);
+            }
+
+            if (total < bestLen) {
+              bestLen = total;
+              bestRoute = fullRoute;
+            }
+          }
+        }
+
+        if (!bestRoute.length) {
+          console.warn("[ROUTE] sin camino real entre nodos", {
+            startCandidates,
+            endCandidates
+          });
+        }
+
+        return bestRoute;
+      }
+
+
+
+      function drawStreetRoute(coords){
+        if (!coords || !coords.length) return;
+
+        const m = (typeof atMap === "function") ? atMap() : window.__AT_MAP;
+        if (!m) return;
+
+        // limpiar capa anterior
+        if (window.__TEST_STREET_ROUTE){
+          try { m.removeLayer(window.__TEST_STREET_ROUTE); } catch(_){}
+        }
+        if (window.__TEST_STREET_MARKERS){
+          try { m.removeLayer(window.__TEST_STREET_MARKERS); } catch(_){}
+        }
+
+        window.__TEST_STREET_ROUTE = L.polyline(
+          coords.map(c => [c[1], c[0]]),
+          {
+            color: "#ff8c00",
+            weight: 6,
+            opacity: 0.95,
+            lineCap: "round",
+            lineJoin: "round"
+          }
+        ).addTo(m);
+
+        window.__TEST_STREET_MARKERS = L.layerGroup().addTo(m);
+
+        const first = coords[0];
+        const last  = coords[coords.length - 1];
+
+        L.circleMarker([first[1], first[0]], {
+          radius: 7,
+          color: "#ff8c00",
+          fillColor: "#ff8c00",
+          fillOpacity: 1
+        }).addTo(window.__TEST_STREET_MARKERS).bindPopup("Inicio ruta callejera");
+
+        L.circleMarker([last[1], last[0]], {
+          radius: 7,
+          color: "#8e44ad",
+          fillColor: "#8e44ad",
+          fillOpacity: 1
+        }).addTo(window.__TEST_STREET_MARKERS).bindPopup("Fin ruta callejera");
+
+        try{
+          const b = window.__TEST_STREET_ROUTE.getBounds();
+          if (b && b.isValid()) m.fitBounds(b.pad(0.12));
+        }catch(_){}
+
+        // ===============================
+        // MARCADORES INICIO / FIN
+        // ===============================
+
+        // limpiar marcadores anteriores
+        if (window.__ROUTE_MARKERS){
+          window.__ROUTE_MARKERS.forEach(marker => m.removeLayer(marker));
+        }
+        window.__ROUTE_MARKERS = [];
+
+        // validar que haya ruta
+        if (coords && coords.length > 1){
+
+          const start = coords[0];
+          const end = coords[coords.length - 1];
+
+          const startMarker = L.circleMarker([start[1], start[0]], {
+            radius: 9,
+            pane: "markerPane",
+            color: "#0f766e",
+            fillColor: "#22c55e",
+            fillOpacity: 1,
+            weight: 3
+          }).bindPopup("Inicio de ruta");
+
+          const endMarker = L.circleMarker([end[1], end[0]], {
+            radius: 9,
+            pane: "markerPane",
+            color: "#991b1b",
+            fillColor: "#ef4444",
+            fillOpacity: 1,
+            weight: 3
+          }).bindPopup("Fin de ruta");
+
+          startMarker.setStyle({ interactive: true });
+          endMarker.setStyle({ interactive: true });
+
+          startMarker.addTo(m);
+          endMarker.addTo(m);
+
+          window.__ROUTE_MARKERS.push(startMarker, endMarker);
+        }
+      }
+
+      function orderSnappedPointsByNearest(snapped) {
+        if (!snapped || snapped.length <= 2) return snapped ? snapped.slice() : [];
+
+        const remaining = snapped.slice(1); // dejamos fijo el primero
+        const ordered = [snapped[0]];
+
+        while (remaining.length) {
+          const last = ordered[ordered.length - 1];
+
+          let bestIndex = 0;
+          let bestDist = Infinity;
+
+          for (let i = 0; i < remaining.length; i++) {
+            const candidate = remaining[i];
+
+            const d = haversineMeters(
+              last.snapped || last.coord || last.original,
+              candidate.snapped || candidate.coord || candidate.original
+            );
+
+            if (d < bestDist) {
+              bestDist = d;
+              bestIndex = i;
+            }
+          }
+
+          ordered.push(remaining.splice(bestIndex, 1)[0]);
+        }
+
+        return ordered;
+}
+
+
+
+  function buildFullStreetRouteFromSnapped(snapped) {
+    if (!snapped || snapped.length < 2) return [];
+
+    const ordered = orderSnappedPointsByNearest(snapped);
+
+    console.log("[DEBUG ORDEN ORIGINAL]", snapped.map((p, i) => ({
+      i,
+      snapped: p.snapped,
+      nodeId: p.nodeId
+    })));
+
+    console.log("[DEBUG ORDEN REORDENADO]", ordered.map((p, i) => ({
+      i,
+      snapped: p.snapped,
+      nodeId: p.nodeId
+    })));
+
+    let fullRoute = [];
+    let skipped = 0;
+
+    for (let i = 0; i < ordered.length - 1; i++) {
+      const a = ordered[i];
+      const b = ordered[i + 1];
+
+      const tramo = routeBetweenSnappedPoints(a, b);
+
+      if (!tramo || !tramo.length) {
+        skipped++;
+        console.warn(`[FULL ROUTE] sin camino entre puntos ${i + 1} y ${i + 2}`);
+        continue;
+      }
+
+      if (fullRoute.length > 0) {
+        const last = fullRoute[fullRoute.length - 1];
+        const first = tramo[0];
+
+        if (
+          last[0].toFixed(6) === first[0].toFixed(6) &&
+          last[1].toFixed(6) === first[1].toFixed(6)
+        ) {
+          fullRoute = fullRoute.concat(tramo.slice(1));
+        } else {
+          fullRoute = fullRoute.concat(tramo);
+        }
+      } else {
+        fullRoute = tramo.slice();
+      }
+    }
+
+    console.log(`[FULL ROUTE] tramos sin camino real: ${skipped}`);
+    return fullRoute;
+  }
+
+
+    

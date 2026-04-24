@@ -1,0 +1,455 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Campo</title>
+    <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <link rel="icon" href="data:," />
+
+      <link rel="stylesheet" href="campo.css"/>
+  </head>
+  <body>
+    <div id="campo-layout">
+    <!--
+      Nota (2025-10-22): Se eliminaron bloques HTML duplicados que contenían
+      elementos con atributos `id` repetidos (por ejemplo: `ec-*`, `ct-pin`).
+      Cambios realizados:
+        - Eliminado el bloque reducido `#ec-panel` para evitar duplicidad con
+          el panel completo `#estrategico-campo-panel`.
+        - Eliminado el segundo modal duplicado ("Modal PIN demo").
+        - Convertidas las segundas ocurrencias visuales de `ec-kpis` y
+          `ec-contador` a clases (`.ec-kpis`, `.ec-contador`) para mantener
+          la integridad del DOM sin romper selectores JS que apuntan a los IDs
+          principales.
+      Resultado: se suprimen los warnings de elementos con IDs no únicos en
+      la consola del navegador y se conserva la funcionalidad del módulo CAMPO.
+    -->
+    <!-- Elementos funcionales para wireUI eliminados (duplicados) -->
+
+    <div id="panel-lateral">
+      <div id="panel-header">
+        <!-- <img src="../assets/img/logo.png" alt="Logo"/> -->
+        <span>Campo</span>
+      </div>
+      <!-- Aquí va el contenido del panel lateral -->
+
+      <!-- Buscador de secciones -->
+      <div
+        id="sec-search"
+        style="
+          padding: 10px 12px;
+          border-top: 1px solid #cbd5e1;
+          background: #eef2f7;
+        "
+      >
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input
+            id="sec-q"
+            type="text"
+            placeholder="Buscar sección (ej. 1234 o '1234 León')"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="search"
+            style="
+              flex: 1;
+              padding: 6px 8px;
+              border: 1px solid #94a3b8;
+              border-radius: 6px;
+            "
+          />
+          <label style="white-space: nowrap; font-size: 12px">
+            <input id="sec-global" type="checkbox" /> Todo el estado
+          </label>
+        </div>
+        <ul
+          id="sec-suggest"
+          style="
+            margin: 8px 0 0 0;
+            padding: 0;
+            list-style: none;
+            max-height: 180px;
+            overflow: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            display: none;
+          "
+        ></ul>
+      </div>
+
+      <div
+        id="mini-universe"
+        style="
+          padding: 12px 12px 6px 12px;
+          background: #eef2f7;
+          border-top: 1px solid #cbd5e1;
+        "
+      >
+        <div class="row" style="margin-bottom: 8px">
+          <label
+            ><input type="checkbox" id="mini-all-state" /> Estado
+            completo</label
+          >
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Municipio</label>
+          <select id="mini-sel-mun" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Federal</label>
+          <select id="mini-sel-df" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Local</label>
+          <select id="mini-sel-dl" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="hint" style="font-size: 12px; color: #64748b">
+          Elige solo uno. Al cambiar, el mapa se actualiza.
+        </div>
+      </div>
+      <!-- Botón CAMPO integrado al panel lateral -->
+      <div
+        id="btn-campo-container"
+        style="margin-top: 12px; text-align: center"
+      >
+        <button
+          id="btn-campo"
+          class="btn-campo"
+          type="button"
+          data-target="#estrategico-campo-panel"
+          aria-controls="estrategico-campo-panel"
+          aria-expanded="false"
+        >
+          <i class="fa fa-map-marker-alt"></i> Módulo CAMPO
+        </button>
+      </div>
+    </div>
+    <div id="map-wrap">
+      <div id="map"></div>
+    </div>
+    <div id="campo-dashboard">
+      <div id="dash-panels">
+        <div id="sec-info">
+          <div class="hdr">
+            <span class="ttl">Sección</span>
+            <button id="sec-close" class="btn-close" aria-label="Cerrar">×</button>
+          </div>
+          <div class="body">
+            <div class="row">
+              <span class="k">Sección</span> <span class="v" id="si-sec">—</span>
+            </div>
+            <div class="row">
+              <span class="k">Distrito Federal</span
+              ><span class="v" id="si-df">—</span>
+            </div>
+            <div class="row">
+              <span class="k">Distrito Local</span>
+              <span class="v" id="si-dl">—</span>
+            </div>
+            <div class="row">
+              <span class="k">LN (2024)</span> <span class="v" id="si-ln">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- === ESTRATEGICO CAMPO: PANEL === -->
+        <div id="estrategico-campo-panel" class="ec-panel ec-hidden">
+          <div class="ec-header">
+            <strong>Módulo CAMPO · AT 27–30</strong>
+            <button id="ec-btn-cerrar" class="ec-icon">✕</button>
+          </div>
+
+          <div class="ec-counter">
+            <span id="ec-contador">0</span> registros locales
+          </div>
+          <div
+            id="ec-kpis"
+            style="display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px 0"
+          ></div>
+
+          <div class="ec-tabs">
+            <button class="ec-tab ec-tab-active" data-tab="captura">
+              Promotor
+            </button>
+            <button class="ec-tab" data-tab="admin">Administrador</button>
+          </div>
+
+          <div
+            class="ec-kpis"
+            style="display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px 0"
+          ></div>
+
+          <div class="ec-tabview" id="ec-tab-captura">
+            <div class="ec-field">
+              <label>Tipo asignación</label>
+              <select id="ec-tipo">
+                <option value="SIMPATIZANTE">SIMPATIZANTE</option>
+                <option value="LIDER">LÍDER</option>
+                <option value="ADVERSARIO">ADVERSARIO</option>
+                <option value="REP_CASILLA">REPRESENTANTE DE CASILLA</option>
+                <option value="REP_GENERAL">REPRESENTANTE GENERAL</option>
+                <option value="OBSERVADOR">OBSERVADOR</option>
+              </select>
+            </div>
+
+            <div class="ec-grid2">
+              <div class="ec-field">
+                <label>Nombre</label>
+                <input id="ec-nombre" placeholder="Nombre completo" />
+              </div>
+            </div>
+
+            <div class="ec-field">
+              <label>Teléfono</label>
+              <input
+                id="ec-telefono"
+                type="tel"
+                inputmode="tel"
+                placeholder="10 dígitos"
+                maxlength="14"
+              />
+            </div>
+
+            <div class="ec-grid2">
+              <div class="ec-field">
+                <label>Sección</label>
+                <input id="ec-seccion" placeholder="Se autollenará por mapa/GPS" />
+              </div>
+              <div class="ec-field">
+                <label>Ámbito</label>
+                <input id="ec-ambito" placeholder="MUN / DF / DL (opcional)" />
+              </div>
+            </div>
+
+            <input type="hidden" id="ec-dl" />
+            <input type="hidden" id="ec-df" />
+            <input type="hidden" id="ec-muni" />
+
+            <div class="ec-captura-modos">
+              <button id="ec-gps" class="ec-btn">📍 GPS</button>
+              <button id="ec-mapa" class="ec-btn">🗺️ Selección en mapa</button>
+              <div class="ec-field ec-grow">
+                <input
+                  id="ec-dom"
+                  placeholder="Domicilio (calle, número, colonia, municipio)"
+                />
+              </div>
+              <button id="ec-geocode" class="ec-btn">🔎</button>
+            </div>
+
+            <div class="ec-field">
+              <label>Observaciones</label>
+              <textarea id="ec-obs" rows="2" placeholder="Notas rápidas"></textarea>
+            </div>
+
+            <div class="ec-actions">
+              <button id="ec-guardar" class="ec-primary">Guardar registro</button>
+              <button id="ec-export" class="ec-secondary">Enviar</button>
+              <small
+                id="ec-export-name"
+                style="align-self: center; margin-left: 8px; color: #556"
+                >puntos_campo_no-pin_YYYYMMDD.geojson</small
+              >
+              <button id="ec-copiar" class="ec-secondary">
+                Descargar Capturas
+              </button>
+              <button id="ec-limpiar" class="ec-tertiary">
+                Limpiar formulario
+              </button>
+            </div>
+
+            <div class="ec-counter">
+              <span class="ec-contador">0</span> registros locales
+            </div>
+          </div>
+
+          <div class="ec-tabview ec-hidden" id="ec-tab-admin">
+
+            
+         <hr style="margin:12px 0;border:none;border-top:1px solid #e5e7eb" />
+
+            <div style="padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:#fbfdff">
+              <div style="font-weight:800;margin-bottom:6px">CAMPO-OFICINA · Generador de rutas</div>
+              <div style="font-size:12px;color:#64748b;margin-bottom:10px">
+                Importa <code>df3_base_operativa.geojson</code>, elige sección origen y genera rutas de 60 puntos por pareja.
+              </div>
+
+             <div class="ec-field">
+              <label>Base de puntos</label>
+              <input value="../data/geo/df3_base_operativa.geojson" readonly />
+              <small style="color:#64748b">La base se carga automáticamente al abrir CAMPO.</small>
+            </div>
+
+              <div class="ec-grid2">
+                <div class="ec-field">
+                  <label>Fecha / Jornada</label>
+                  <input id="of-fecha" type="date" />
+                </div>
+                <div class="ec-field">
+                  <label>Meta por pareja (puntos por ruta)</label>
+                  <input id="of-meta" type="number" value="60" min="10" max="300" />
+                </div>
+              </div>
+
+              <div class="ec-grid2">
+                <div class="ec-field">
+                  <label>Objetivo por sección (aprox.)</label>
+                  <input id="of-target-sec" type="number" value="120" min="30" max="500" />
+                </div>
+                <div class="ec-field">
+                  <label>Número de parejas (opcional)</label>
+                  <input id="of-num-parejas" type="number" value="1" min="1" max="50" />
+                </div>
+              </div>
+
+              <div class="ec-grid2">
+                <div class="ec-field">
+                  <label>Campo SECCIÓN (en propiedades)</label>
+                  <input id="of-field-seccion" value="SECCION" />
+                  <small style="color:#64748b">Si tu GeoJSON usa otro nombre (ej. SECC, SEC), cámbialo.</small>
+                </div>
+                <div class="ec-field">
+                  <label>Campo ID de punto (en propiedades)</label>
+                  <input id="of-field-id" value="PUNTO_ID" />
+                  <small style="color:#64748b">Si no existe, lo generamos automáticamente.</small>
+                </div>
+              </div>
+
+              <div class="ec-field">
+                <label>Sección origen</label>
+                <select id="of-sec-origen">
+                  <option value="">— Carga el archivo para ver secciones —</option>
+                </select>
+              </div>
+
+              <div class="ec-actions">
+                <button id="of-btn-cargar" class="ec-primary" type="button">Cargar base</button>
+                <button id="btn-oficina-ruta-inteligente" class="btn-oficina-ruta-inteligente" type="button">
+                  🧭 Generar Ruta Inteligente
+                </button>
+                <button id="btn-oficina-limpiar-ruta" class="btn-oficina-limpiar-ruta">
+                  🧹 Limpiar Ruta
+                </button>
+
+                <button id="of-btn-generar" class="ec-btn" type="button" disabled style="display:none">Generar rutas</button>
+                <button id="of-btn-descargar-resumen" class="ec-btn" type="button" disabled>Descargar resumen CSV</button>
+                <button id="of-btn-red-vial" class="ec-btn" type="button">Mostrar red vial</button>
+              </div>
+
+              <div style="margin-top:10px">
+                <div style="font-size:12px;color:#64748b">Salida:</div>
+                <div id="of-out" style="font-size:12px;display:grid;gap:6px;margin-top:6px"></div>
+              </div>
+            </div>
+
+
+            <div class="ec-field">
+              <label>URL GeoJSON (GitHub RAW)</label>
+              <input
+                id="ec-admin-url"
+                placeholder="https://.../puntos_campo.geojson"
+              />
+            </div>
+            <div class="ec-actions">
+              <button id="ec-admin-cargar" class="ec-primary">Cargar puntos</button>
+              <button id="ec-admin-limpiar" class="ec-tertiary">Quitar capa</button>
+            </div>
+            <hr />
+            <div class="ec-field">
+              <label>PINs (separados por coma)</label>
+              <input id="ec-admin-pins" placeholder="2701,1234" />
+            </div>
+            <div class="ec-actions">
+              <button id="ec-admin-save-pins" class="ec-primary">
+                Guardar PINs
+              </button>
+            </div>
+            <small
+              >Escribe uno o varios PINs separados por coma. El PIN con el que se
+              ingrese se registrará en cada punto como
+              <code>PROMOTOR_PIN</code>.</small
+            >
+            <small
+              >Tip: publica <code>puntos_campo.geojson</code> en tu repo y pega aquí
+              la URL RAW.</small
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === SCRIPT ÚNICO === -->
+    <script src="campo.js"></script>
+    
+
+    </div>
+    <div
+      id="ct-pin"
+      style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 20000;
+      "
+    >
+      <div
+        style="
+          background: #fff;
+          padding: 14px 16px;
+          border-radius: 14px;
+          min-width: 260px;
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+        "
+      >
+        <div style="font-weight: 700; margin-bottom: 8px">Acceso CAMPO</div>
+        <input
+          id="ct-pin-i"
+          type="password"
+          placeholder="PIN"
+          style="
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 10px;
+          "
+        />
+        <div style="display: flex; gap: 8px; justify-content: flex-end">
+          <button
+            id="ct-pin-ok"
+            class="ec-primary"
+            style="
+              padding: 6px 10px;
+              border: none;
+              border-radius: 10px;
+              color: #fff;
+              background: #7b1b2b;
+            "
+          >
+            Entrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Segundo modal PIN eliminado (duplicado). Se mantiene el modal funcional con input más arriba. -->
+  </body>
+</html>
+

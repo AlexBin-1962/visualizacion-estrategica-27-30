@@ -1,233 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Socioeconómico · v2 (con Proyección 2027)</title>
-  <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <style>
-
-    /* Etiqueta fija al centrar una sección */
-
-    /* Placa "Sección ###" fija al centro */
-    .sec-badge{
-      background:#fff; color:#111827; border:3px solid #3b28ff;
-      border-radius:8px; padding:4px 10px; font-weight:700; font-size:12px;
-      box-shadow:0 10px 24px rgba(0,0,0,.18);
-    }
-    .sec-badge .pin{
-      display:inline-block; width:10px; height:6px; border:2px solid #3b28ff;
-      border-radius:8px; margin-right:6px;
-    }
-
-    .leaflet-tooltip.sec-label{
-      background:#111827; color:#fff; border:none; border-radius:10px;
-      padding:6px 8px; box-shadow:0 8px 20px rgba(0,0,0,.18); font-size:12px;
-    }
-    .leaflet-tooltip.sec-label:before{ display:none; }
-
-    html, body { margin:0; padding:0; height:100%; width:100%; font-family:'Segoe UI', Arial, sans-serif; background:#f4f6fb; color:#1f2937; }
-    
-    
-    :root{ --sidebar-w:240px; --stroke:#e6eaf2; --primary:#2563eb; --accent:#3b82f6; --card:#fff; }
-
-    body{
-      display:grid;
-      grid-template-columns: var(--sidebar-w) 1fr 1fr;
-      grid-template-rows: 100vh;
-      overflow:hidden;
-    }
-    #at-layout{ display:contents; }
-    
-    #panel-lateral{
-      width:var(--sidebar-w); height:100vh;
-      background: linear-gradient(180deg, #8ea3ad 0%, #dfe6e9 100%);
-      border-right:1px solid #b2bec3; box-shadow:2px 0 5px rgba(0,0,0,.08);
-      display:flex; flex-direction:column; z-index:2000; overflow-y:auto;   /* <- scroll si hiciera falta */
-    }
-    #panel-header{ padding:10px 12px; font-size:16px; }
-
-    #map-wrap{
-      position:relative;
-      height:100vh;
-      min-width:0;
-      overflow:hidden;
-    }
-    #map{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      z-index:100;
-      background:#f4f6fb;
-    }
-
-    #at-dashboard{
-      height:100vh;
-      min-width:0;
-      overflow:hidden;
-      background:#f2f6fb;
-      border-left:1px solid #d3dbe0;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      padding:12px;
-      box-sizing:border-box;
-    }
-    #dash-panels{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
-      min-height:0;
-      overflow:auto;
-      padding-right:4px;
-    }
-
-    .card{ margin:10px; padding:10px; border:1px solid var(--stroke); border-radius:14px; background:var(--card); }
-    .row{ display:flex; flex-direction:column; gap:4px; margin-bottom:6px; }
-    label{ font-size:12px; color:#475569; }
-    select, input[type="number"], input[type="text"]{
-      width:100%; padding:8px; border:1px solid var(--stroke); border-radius:10px; background:#f3f6fa; font-size:13.5px;
-    }
-    .btn{ cursor:pointer; background:#fff; color:#111827; border:1px solid var(--stroke); border-radius:10px; padding:8px 10px; font-weight:700; font-size:13px; }
-    .btn.primary{ background:var(--accent); color:#fff; border-color:#1d4ed8; }
-    .hint{ display:none; }  /* <- oculta textos explicativos */
-    .btn:disabled{ opacity:.55; cursor:not-allowed; }
-
-    /* Leyenda */
-    .legend{ position:absolute; right:14px; bottom:18px; z-index:2100; background:#fff; border:1px solid var(--stroke); border-radius:12px; padding:10px 12px; box-shadow:0 10px 28px rgba(0,0,0,.12); min-width:200px; }
-    .legend h4{ margin:0 0 6px; font-size:14px; color:#111827; }
-    .legend .item{ display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12.5px; color:#374151; }
-    .legend .sw{ width:16px; height:12px; border-radius:4px; border:1px solid rgba(0,0,0,.15); }
-
-    /* Panel del universo mínimo (reutiliza patrón) */
-    .mini{ background:#eef2f7; border-top:1px solid #cbd5e1; padding:12px; }
-    .mini .row{ margin-bottom:8px; }
-
-    #q-suggest{
-      position: relative; max-height: 220px; overflow:auto;
-      background:#fff; border:1px solid #cbd5e1; border-radius:6px;
-      display:none; z-index:3000;
-    }
-    #q-suggest li{ padding:6px 8px; border-bottom:1px solid #eef2f7; cursor:pointer; }
-    #q-suggest li:hover{ background:#f8fafc; }
-
-  </style>
-</head>
-<body>
-  <div id="at-layout">
-  <div id="panel-lateral">
-    <div id="panel-header">Socioeconómico</div>
-
-  <!-- UNIVERSO (arriba) -->
-  <div class="card mini" id="universo">
-    <div class="row" style="flex-direction:row; gap:6px;">
-      <input id="q-seccion" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Buscar sección (ej. 1234)"/>
-      <button class="btn" id="btn-ir-sec">Ir</button>
-    </div>
-    <ul id="q-suggest" style="margin:6px 0 0; padding:0; list-style:none;"></ul>
-
-
-    <div class="row"><label><input type="checkbox" id="mini-all"> Estado completo</label></div>
-
-    <div class="row">
-      <label>Municipio</label>
-      <select id="mini-mun"><option value="">— Ninguno —</option></select>
-    </div>
-    <div class="row">
-      <label>Distrito Federal</label>
-      <select id="mini-df"><option value="">— Ninguno —</option></select>
-    </div>
-    <div class="row">
-      <label>Distrito Local</label>
-      <select id="mini-dl"><option value="">— Ninguno —</option></select>
-    </div>
-  </div>
-
-  
-
-
- 
-
-  </div>
-
-  <div id="map-wrap">
-    <div id="map"></div>
-    <div id="legend" class="legend" style="display:none;"></div>
-  </div>
-
-  <div id="at-dashboard">
-    <div id="dash-panels">
-      <div class="card" id="controls">
-        <div class="card-head" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <strong>Controles</strong>
-          <button class="btn" id="controls-close" type="button">×</button>
-        </div>
-        <div class="row">
-          <label for="ind-sel">Indicador</label>
-          <select id="ind-sel">
-            <option value="IM">Marginación (IM)</option>
-            <option value="EDU">Rezago educativo</option>
-            <option value="ING">Ingreso estimado</option>
-            <option value="SERV">Acceso a servicios</option>
-            <option value="POB">Pobreza (proxy)</option>
-            <option value="URB">Índice urbano-rural</option>
-            <!-- Luego se añaden Población 18+ 2027 y Lista Nominal 2027 -->
-          </select>
-          <div class="hint">Fuente: GeoJSON + socioeconómico que tengas en el Portal (AT_PATHS). Si no hay dataset, se simula para probar.</div>
-        </div>
-
-        <div class="row">
-          <label for="clasif">Clasificación</label>
-          <select id="clasif">
-            <option value="q5">Quintiles (Q5)</option>
-            <option value="q4">Cuartiles (Q4)</option>
-            <option value="q3">Tercios (Q3)</option>
-          </select>
-          <div class="hint">Cuantiles: separa en rangos de igual número de secciones; oscuro = mayor valor.</div>
-        </div>
-
-        <div class="row" style="gap:8px;">
-          <input type="file" id="file-input" accept=".csv,.json"/>
-          <button class="btn" id="btn-clear">Limpiar datos cargados</button>
-        </div>
-
-        <div class="row">
-          <button class="btn primary" id="btn-aplicar">Aplicar en mapa</button>
-        </div>
-      </div>
-
-      <div class="card" id="proj">
-        <div class="card-head" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <strong>Proyección 2027</strong>
-          <button class="btn" id="proj-close" type="button">×</button>
-        </div>
-        <div class="row">
-          <div class="hint">Si existe 2018→2024, uso CAGR local; si no, uso tu tasa anual.</div>
-        </div>
-
-        <div class="row">
-          <label for="tasa-ln">Tasa anual LN (%)</label>
-          <input type="number" id="tasa-ln" step="0.1" min="-10" max="10" value="1.5"/>
-          <button class="btn" id="btn-proj-ln">Calcular <b>Lista Nominal 2027</b></button>
-        </div>
-
-        <div class="row">
-          <label for="tasa-p18">Tasa anual P18+ (%)</label>
-          <input type="number" id="tasa-p18" step="0.1" min="-10" max="10" value="1.2"/>
-          <button class="btn" id="btn-proj-p18">Calcular <b>Población 18+ 2027</b></button>
-        </div>
-
-        <div class="hint">Campos esperados (si existen): LN_2018, LN_2024, P18_2018, P18_2024. Si faltan, se usa la tasa.</div>
-      </div>
-    </div>
-  </div>
-  </div>
-
-  <script>
-    // ========= Config =========
+﻿    // ========= Config =========
     const FIELD_KEYS = { mun:'MUNICIPIO', dl:'DISTRITO_L', df:'DISTRITO_F' };
     const PALETTE = ['#eff3ff','#cfe0fb','#9ec5fe','#6ea8fe','#3d8bfd','#1d4ed8'];
 
@@ -235,9 +6,9 @@
     function getUniverse(){ try{ return JSON.parse(localStorage.getItem('AT_UNIVERSE')||'null'); }catch{ return null; } }
 
     const paths = getPaths();
-    const urlGeo = paths.geo || 'data/geo/secciones.geojson';
-    const socioUrl = paths.socio || 'data/Datos_Socioeconomicos.json';
-    const catUrl = paths.catalog || 'data/catalogo_territorial.json';
+    const urlGeo = paths.geo || '../data/geo/secciones.geojson';
+    const socioUrl = paths.socio || '../data/Datos_Socioeconomicos.json';
+    const catUrl = paths.catalog || '../data/catalogo_territorial.json';
 
     // ========= Mapa =========
     function ensureMap(){
@@ -677,7 +448,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       const m = ensureMap();
       const u = getUniverse();
-      if (!u){ alert('Define el universo en el Portal primero.'); try{ location.href='portal.html'; }catch{} return; }
+      if (!u){ alert('Define el universo en el Portal primero.'); try{ location.href='../portal/portal.html'; }catch{} return; }
 
       const raw = await loadGeo();
       const geo = filterGeo(raw, u);
@@ -751,9 +522,10 @@
 
       wireFileInput();
     });
-  </script>
+  
 
-  <script>
+// ---- inline block separator ----
+
     /* ——— índice y búsqueda ——— */
     const _norm = s => String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
     let __IDX = [];   // {sec, mun, df, dl, feature}
@@ -867,9 +639,10 @@
       const side = document.getElementById('panel-lateral');
       if (side){ L.DomEvent.disableClickPropagation(side); L.DomEvent.disableScrollPropagation(side); }
     }
-  </script>
+  
 
-  <script>
+// ---- inline block separator ----
+
     /* — Etiqueta/label para la sección seleccionada — */
     window.HILITE_LABEL = null;
 
@@ -924,9 +697,9 @@
       const sec = typeof arg==='string' ? arg : arg?.sec;
       if (sec) showSectionLabel(sec);
     };
-</script>
 
-<script>
+// ---- inline block separator ----
+
 // ===== Placa fija "Sección ###" =====
   window.SEC_BADGE = window.SEC_BADGE || null;
 
@@ -963,10 +736,3 @@
     };
     window.__wipe_badge_on_universe = true;
   }
-</script>
-
-
-
-
-</body>
-</html>

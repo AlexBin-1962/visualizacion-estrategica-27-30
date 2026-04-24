@@ -1,139 +1,7 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Dashboard Municipal — AT 27-30</title>
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-
-  <style>
-    :root{
-      --bg:#f6f7f9; --card:#fff; --text:#111827; --muted:#6b7280;
-      --line:#e5e7eb; --shadow:0 10px 30px rgba(0,0,0,.08);
-      --accent:#7a1f2b; /* guinda tenue */
-    }
-    *{box-sizing:border-box}
-    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto; background:var(--bg); color:var(--text);}
-    .topbar{
-      position:sticky; top:0; z-index:5; background:rgba(246,247,249,.92);
-      backdrop-filter: blur(8px); border-bottom:1px solid var(--line);
-      padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px;
-    }
-    .title{display:flex; flex-direction:column; gap:4px;}
-    .title h1{margin:0; font-size:16px; letter-spacing:.2px}
-    .title .sub{font-size:12px; color:var(--muted)}
-    .actions{display:flex; gap:8px; flex-wrap:wrap}
-    .btn{
-      border:1px solid var(--line); background:#fff; padding:10px 12px; border-radius:12px;
-      cursor:pointer; font-weight:600; font-size:12px; box-shadow:0 6px 18px rgba(0,0,0,.06);
-    }
-    .btn.primary{border-color:rgba(122,31,43,.25)}
-    .wrap{padding:14px 16px 22px;}
-    .grid{
-      display:grid; grid-template-columns: 1.2fr .8fr; gap:14px;
-    }
-    .card{
-      background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow);
-      padding:14px;
-    }
-    .kpis{display:grid; grid-template-columns: repeat(5, 1fr); gap:10px}
-    .kpi{padding:12px; border:1px solid var(--line); border-radius:16px; background:#fff}
-    .kpi .label{font-size:11px; color:var(--muted); margin-bottom:6px}
-    .kpi .value{font-size:16px; font-weight:800}
-    .row2{display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-top:14px;}
-    .row3{display:grid; grid-template-columns: 1fr; gap:14px; margin-top:14px;}
-    #map{height:520px; border-radius:16px; overflow:hidden; border:1px solid var(--line)}
-    .rent-grid{display:grid; grid-template-columns:1fr; gap:12px}
-    .list{border:1px solid var(--line); border-radius:16px; overflow:hidden}
-    .list .head{display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#fbfbfc}
-    .list .head b{font-size:12px}
-    .list .body{max-height:170px; overflow:auto}
-    .item{display:flex; justify-content:space-between; gap:10px; padding:10px 12px; border-top:1px solid var(--line); font-size:12px}
-    .pill{padding:3px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); font-weight:700; font-size:11px}
-    .footnote{font-size:11px; color:var(--muted); margin-top:8px; line-height:1.35}
-    canvas{max-width:100%}
-    @media (max-width:1100px){
-      .grid{grid-template-columns:1fr}
-      .kpis{grid-template-columns: repeat(2,1fr)}
-      #map{height:420px}
-    }
-  </style>
-</head>
-
-<body>
-  <div class="topbar">
-    <div class="title">
-      <h1 id="hdrTitle">Dashboard Municipal — AT 27-30</h1>
-      <div class="sub" id="hdrSub">Cargando universo…</div>
-    </div>
-    <div class="actions">
-      <button class="btn" id="btnBack">Volver al portal</button>
-      <button class="btn primary" id="btnPDF">Exportar PDF</button>
-      <button class="btn" id="btnPrint">Imprimir</button>
-    </div>
-  </div>
-
-  <div class="wrap" id="dashboardRoot">
-    <div class="card">
-      <div class="kpis" id="kpiGrid"></div>
-    </div>
-
-    <div class="grid" style="margin-top:14px;">
-      <div class="card">
-        <div id="map"></div>
-        <div class="footnote">
-          * El mapa clasifica secciones por rentabilidad (alta/media/baja) según costo de voltear, tamaño (LN) y participación.
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="rent-grid">
-          <div class="list">
-            <div class="head"><b>Más rentables</b><span class="pill" id="pillHigh">—</span></div>
-            <div class="body" id="listHigh"></div>
-          </div>
-          <div class="list">
-            <div class="head"><b>Rentabilidad media</b><span class="pill" id="pillMid">—</span></div>
-            <div class="body" id="listMid"></div>
-          </div>
-          <div class="list">
-            <div class="head"><b>Menos rentables</b><span class="pill" id="pillLow">—</span></div>
-            <div class="body" id="listLow"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="row2">
-      <div class="card">
-        <h3 style="margin:0 0 10px;font-size:13px;">Historial (2018–2021–2024)</h3>
-        <canvas id="chartHist"></canvas>
-      </div>
-      <div class="card">
-        <h3 style="margin:0 0 10px;font-size:13px;">Ganar Todo — Oportunidades (Top)</h3>
-        <canvas id="chartTop"></canvas>
-      </div>
-    </div>
-
-    <div class="row3">
-      <div class="card">
-        <h3 style="margin:0 0 10px;font-size:13px;">Tabla operativa (Top secciones)</h3>
-        <div id="tableTop"></div>
-      </div>
-    </div>
-  </div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-/*** ========= CONFIG ========= ***/
+﻿/*** ========= CONFIG ========= ***/
 const PATHS = {
-  geojson: "data/geo/secciones.geojson",          // <-- AJUSTA a tu ruta real
-  electoralA: "data/electoral/A.json"             // <-- tu A.json (puesto Ayuntamiento)
+  geojson: "../data/geo/secciones.geojson",          // <-- AJUSTA a tu ruta real
+  electoralA: "../data/electoral/A.json"             // <-- tu A.json (puesto Ayuntamiento)
 };
 
 const PUESTO = "A";
@@ -392,7 +260,7 @@ function renderCharts(rentAll){
   document.getElementById("hdrTitle").textContent = `Dashboard Municipal — ${munLabel}`;
   document.getElementById("hdrSub").textContent = `Puesto ${PUESTO} · Año base ${YEAR_BASE} · Cargando datos…`;
 
-  document.getElementById("btnBack").onclick = ()=> location.href = "portal.html";
+  document.getElementById("btnBack").onclick = ()=> location.href = "../portal/portal.html";
   document.getElementById("btnPDF").onclick = exportPDF;
   document.getElementById("btnPrint").onclick = ()=> window.print();
 
@@ -434,6 +302,3 @@ function renderCharts(rentAll){
   document.getElementById("hdrSub").textContent =
     `Puesto ${PUESTO} · Año base ${YEAR_BASE} · Secciones: ${featuresMun.length}`;
 })();
-</script>
-</body>
-</html>

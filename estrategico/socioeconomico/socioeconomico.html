@@ -1,0 +1,134 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Socioeconómico · v2 (con Proyección 2027)</title>
+  <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="socioeconomico.css"/>
+</head>
+<body>
+  <div id="at-layout">
+  <div id="panel-lateral">
+    <div id="panel-header">Socioeconómico</div>
+
+  <!-- UNIVERSO (arriba) -->
+  <div class="card mini" id="universo">
+    <div class="row" style="flex-direction:row; gap:6px;">
+      <input id="q-seccion" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Buscar sección (ej. 1234)"/>
+      <button class="btn" id="btn-ir-sec">Ir</button>
+    </div>
+    <ul id="q-suggest" style="margin:6px 0 0; padding:0; list-style:none;"></ul>
+
+
+    <div class="row"><label><input type="checkbox" id="mini-all"> Estado completo</label></div>
+
+    <div class="row">
+      <label>Municipio</label>
+      <select id="mini-mun"><option value="">— Ninguno —</option></select>
+    </div>
+    <div class="row">
+      <label>Distrito Federal</label>
+      <select id="mini-df"><option value="">— Ninguno —</option></select>
+    </div>
+    <div class="row">
+      <label>Distrito Local</label>
+      <select id="mini-dl"><option value="">— Ninguno —</option></select>
+    </div>
+  </div>
+
+  
+
+
+ 
+
+  </div>
+
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="legend" class="legend" style="display:none;"></div>
+  </div>
+
+  <div id="at-dashboard">
+    <div id="dash-panels">
+      <div class="card" id="controls">
+        <div class="card-head" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <strong>Controles</strong>
+          <button class="btn" id="controls-close" type="button">×</button>
+        </div>
+        <div class="row">
+          <label for="ind-sel">Indicador</label>
+          <select id="ind-sel">
+            <option value="IM">Marginación (IM)</option>
+            <option value="EDU">Rezago educativo</option>
+            <option value="ING">Ingreso estimado</option>
+            <option value="SERV">Acceso a servicios</option>
+            <option value="POB">Pobreza (proxy)</option>
+            <option value="URB">Índice urbano-rural</option>
+            <!-- Luego se añaden Población 18+ 2027 y Lista Nominal 2027 -->
+          </select>
+          <div class="hint">Fuente: GeoJSON + socioeconómico que tengas en el Portal (AT_PATHS). Si no hay dataset, se simula para probar.</div>
+        </div>
+
+        <div class="row">
+          <label for="clasif">Clasificación</label>
+          <select id="clasif">
+            <option value="q5">Quintiles (Q5)</option>
+            <option value="q4">Cuartiles (Q4)</option>
+            <option value="q3">Tercios (Q3)</option>
+          </select>
+          <div class="hint">Cuantiles: separa en rangos de igual número de secciones; oscuro = mayor valor.</div>
+        </div>
+
+        <div class="row" style="gap:8px;">
+          <input type="file" id="file-input" accept=".csv,.json"/>
+          <button class="btn" id="btn-clear">Limpiar datos cargados</button>
+        </div>
+
+        <div class="row">
+          <button class="btn primary" id="btn-aplicar">Aplicar en mapa</button>
+        </div>
+      </div>
+
+      <div class="card" id="proj">
+        <div class="card-head" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <strong>Proyección 2027</strong>
+          <button class="btn" id="proj-close" type="button">×</button>
+        </div>
+        <div class="row">
+          <div class="hint">Si existe 2018→2024, uso CAGR local; si no, uso tu tasa anual.</div>
+        </div>
+
+        <div class="row">
+          <label for="tasa-ln">Tasa anual LN (%)</label>
+          <input type="number" id="tasa-ln" step="0.1" min="-10" max="10" value="1.5"/>
+          <button class="btn" id="btn-proj-ln">Calcular <b>Lista Nominal 2027</b></button>
+        </div>
+
+        <div class="row">
+          <label for="tasa-p18">Tasa anual P18+ (%)</label>
+          <input type="number" id="tasa-p18" step="0.1" min="-10" max="10" value="1.2"/>
+          <button class="btn" id="btn-proj-p18">Calcular <b>Población 18+ 2027</b></button>
+        </div>
+
+        <div class="hint">Campos esperados (si existen): LN_2018, LN_2024, P18_2018, P18_2024. Si faltan, se usa la tasa.</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <script src="socioeconomico.js"></script>
+
+  
+
+  
+
+
+
+
+
+
+</body>
+</html>

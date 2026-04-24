@@ -1,0 +1,333 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CCT — Centro de Contenido Territorial (Abasolo)</title>
+
+    <!-- Leaflet -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+      <link rel="stylesheet" href="cct.css"/>
+  </head>
+
+  <body>
+    <div class="wr">
+      <!-- MAP -->
+      <div class="mapWrap" id="mapWrap">
+        <div class="hud">
+          <div class="kpi">
+            <small>SECCIÓN</small><span id="hudSec">—</span>
+          </div>
+          <div class="kpi">
+            <small>TIPO</small><span id="hudTipo" class="chip">—</span>
+          </div>
+          <div class="kpi">
+            <small>MARGEN</small><span id="hudMargen">—</span>
+          </div>
+          <div class="kpi">
+            <small>CONECTIVIDAD</small><span id="hudConn" class="chip">—</span>
+          </div>
+        </div>
+
+        <div class="miniTools">
+          <button class="miniBtn" id="btnFitAll" type="button" title="Ver todo">
+            Ver todo
+          </button>
+          <button
+            class="miniBtn"
+            id="btnClearSel"
+            type="button"
+            title="Limpiar selección"
+          >
+            Limpiar
+          </button>
+        </div>
+
+        <div id="cctMap"></div>
+      </div>
+
+      <!-- PANEL -->
+      <div class="panel" id="panel">
+        <div class="pHeader">
+          <div class="brand">
+            <div class="title">
+              CCT — Centro de Contenido Territorial · Abasolo
+              <span class="lockPill" id="lockPill">🔒 LOCKED</span>
+            </div>
+            <div class="subtitle">
+              War Room · Selecciona una sección en el mapa para operar.
+            </div>
+          </div>
+
+          <div class="topActions">
+            <button class="btn btnGhost" id="btnGoPortal" type="button">
+              Ir a portal
+            </button>
+            <button class="btn btnDanger" id="btnLogout" type="button">
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="brief" type="button">
+            Brief IA
+          </button>
+          <button class="tab" data-tab="diag" type="button">Diagnóstico</button>
+          <button class="tab" data-tab="plan" type="button">
+            Plan de acción
+          </button>
+          <button class="tab" data-tab="hist" type="button">Historial</button>
+        </div>
+
+        <div class="pBody" id="tab_brief">
+          <div class="card">
+            <div class="cardTitle">
+              <span>A) Contexto y controles</span>
+              <span class="chip" id="chipStatus">Selecciona sección</span>
+            </div>
+
+            <div class="formGrid">
+              <div class="field">
+                <label>Municipio</label>
+                <div class="value" id="cctMunicipio">ABASOLO</div>
+              </div>
+
+              <div class="field">
+                <label>Sección</label>
+                <select class="select" id="selSeccion"></select>
+              </div>
+
+              <div class="field">
+                <label>Etapa</label>
+                <select class="select" id="selEtapa">
+                  <option value="PRECAMPAÑA">PRECAMPAÑA</option>
+                  <option value="CAMPAÑA">CAMPAÑA</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Enfoque</label>
+                <select class="select" id="selEnfoque">
+                  <option value="escucha">Escucha</option>
+                  <option value="posicionamiento">Posicionamiento</option>
+                  <option value="movilizacion">Movilización</option>
+                  <option value="reconexion">Reconexión</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Formato</label>
+                <select class="select" id="selFormato">
+                  <option value="evento">Evento</option>
+                  <option value="video_corto">Video corto</option>
+                  <option value="publicacion">Publicación</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Tono</label>
+                <select class="select" id="selTono">
+                  <option value="cercano">Cercano</option>
+                  <option value="firme">Firme</option>
+                  <option value="inspirador">Inspirador</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Tipo de sección</label>
+                <div class="value" id="valTipo">—</div>
+              </div>
+
+              <div class="field">
+                <label>Margen (A 2024)</label>
+                <div class="value" id="valMargen">—</div>
+              </div>
+            </div>
+
+            <div class="rowActions">
+              <button class="btn btnPrimary" id="btnGenerar" type="button">
+                Generar Payload + Prompt + Brief
+              </button>
+              <button class="btn" id="btnCopyPayload" type="button">
+                Copiar Payload
+              </button>
+              <button class="btn" id="btnCopyPrompt" type="button">
+                Copiar Prompt
+              </button>
+              <button class="btn" id="btnCopyBrief" type="button">
+                Copiar Brief Ejecutivo
+              </button>
+              <button class="btn" id="btnGuardar" type="button">
+                Guardar en historial
+              </button>
+            </div>
+
+            <div class="hint">
+              Tip: Selecciona sección con clic en mapa → zoom + highlight
+              automático. El “Brief Ejecutivo” está pensado para el candidato
+              (sin tecnicismos).
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="card">
+              <div class="cardTitle">B) Payload (JSON)</div>
+              <pre class="mono" id="outPayload"></pre>
+              <div class="rowActions">
+                <button class="btn" id="btnPdfEjecutivo" type="button">
+                  Exportar PDF Ejecutivo
+                </button>
+                <button class="btn" id="btnPdfCompleto" type="button">
+                  Exportar PDF Completo
+                </button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="cardTitle">C) Prompt Maestro (listo para IA)</div>
+              <pre class="mono" id="outPrompt"></pre>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardTitle">D) Brief Ejecutivo (para candidato)</div>
+            <pre class="mono" id="outBrief"></pre>
+          </div>
+        </div>
+
+        <div class="pBody" id="tab_diag" style="display: none">
+          <div class="grid2">
+            <div class="card">
+              <div class="cardTitle">Electoral · Resumen</div>
+              <div class="formGrid">
+                <div class="field">
+                  <label>Ganador (A 2024)</label>
+                  <div class="value" id="dGanador">—</div>
+                </div>
+                <div class="field">
+                  <label>Participación (aprox)</label>
+                  <div class="value" id="dPart">—</div>
+                </div>
+                <div class="field">
+                  <label>Fragmentación</label>
+                  <div class="value" id="dFrag">—</div>
+                </div>
+                <div class="field">
+                  <label>Competitividad</label>
+                  <div class="value" id="dComp">—</div>
+                </div>
+              </div>
+              <div class="hint">
+                Nota: si tu A.json no trae “participación”, se calcula como
+                TOTAL/LN cuando exista LN.
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="cardTitle">Socioeconómico · Etiquetas</div>
+              <div class="formGrid">
+                <div class="field">
+                  <label>Perfil demográfico</label>
+                  <div class="value" id="sDemo">—</div>
+                </div>
+                <div class="field">
+                  <label>Nivel educativo</label>
+                  <div class="value" id="sEdu">—</div>
+                </div>
+                <div class="field">
+                  <label>Presión económica</label>
+                  <div class="value" id="sEco">—</div>
+                </div>
+                <div class="field">
+                  <label>Conectividad</label>
+                  <div class="value" id="sConn">—</div>
+                </div>
+                <div class="field">
+                  <label>Déficit servicios</label>
+                  <div class="value" id="sServ">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardTitle">Lectura rápida (para equipo)</div>
+            <pre class="mono" id="diagNarrativa"></pre>
+          </div>
+        </div>
+
+        <div class="pBody" id="tab_plan" style="display: none">
+          <div class="card">
+            <div class="cardTitle">
+              Plan de acción sugerido (operación + redes)
+            </div>
+            <pre class="mono" id="planTexto"></pre>
+            <div class="rowActions">
+              <button class="btn" id="btnCopyPlan" type="button">
+                Copiar plan
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pBody" id="tab_hist" style="display: none">
+          <div class="card">
+            <div class="cardTitle">
+              <span>Historial CCT (local)</span>
+              <span class="chip" id="histCount">0</span>
+            </div>
+            <div class="rowActions">
+              <button class="btn" id="btnHistRefresh" type="button">
+                Actualizar
+              </button>
+              <button class="btn btnDanger" id="btnHistClear" type="button">
+                Borrar todo
+              </button>
+            </div>
+            <div class="hint">
+              Se guarda en el navegador (localStorage). Ideal para war room
+              interno.
+            </div>
+          </div>
+
+          <div class="list" id="histList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div class="authBackdrop" id="authBackdrop" style="display: none">
+      <div class="auth">
+        <h2>Acceso restringido — CCT</h2>
+        <p>Herramienta interna. Ingresa tu PIN para continuar.</p>
+        <input
+          id="pinInput"
+          type="password"
+          inputmode="numeric"
+          placeholder="••••••"
+          maxlength="16"
+        />
+        <div class="row">
+          <button class="btn btnPrimary" id="btnEnter" type="button">
+            Entrar
+          </button>
+          <button class="btn btnDanger" id="btnExit" type="button">
+            Salir
+          </button>
+        </div>
+        <div class="msg" id="authMsg">PIN incorrecto.</div>
+      </div>
+    </div>
+
+    <!-- libs -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+    <script src="cct.js"></script>
+  </body>
+</html>
