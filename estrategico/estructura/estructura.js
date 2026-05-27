@@ -1567,7 +1567,11 @@
         }
         const layer2 = L.geoJSON(filtered2, {
           style: { color: "#7d0025", weight: 1.2, fillOpacity: 0.15 },
+          interactive: true, 
+          onEachFeature: configurarFeatureSeccion
         }).addTo(atMap);
+
+        layer2.bringToFront();
         try {
           atMap.fitBounds(layer2.getBounds(), { padding: [20, 20] });
         } catch (e) {}
@@ -2315,25 +2319,8 @@
         // e) Dibujar capa
         const layer = L.geoJSON(filtered, {
           style: { color: "#000000", weight: 1.2, fillOpacity: 0.15 },
-          onEachFeature: (feat, lyr) => {
-            const p = feat.properties || {};
-            const muni = p[FIELD_KEYS.mun] ?? "—";
-            const dl = p[FIELD_KEYS.dl] ?? "—";
-            const df = p[FIELD_KEYS.df] ?? "—";
-
-            lyr.bindPopup(
-              `<b>Sección</b>: ${
-                p.SECCION ?? "—"
-              }<br><b>Mun</b>: ${muni}<br><b>DL</b>: ${dl}<br><b>DF</b>: ${df}`
-            );
-
-            lyr.on("mouseover", () => lyr.setStyle({ weight: 2 }));
-            lyr.on("mouseout", () => lyr.setStyle({ weight: 1.2 }));
-
-            lyr.on("click", () => {
-              seleccionarSeccionET27(p.SECCION);
-            });
-          },
+          interactive: true,
+          onEachFeature: configurarFeatureSeccion
         }).addTo(atMap);
 
         try {
@@ -3623,6 +3610,17 @@
 
         const sec = String(secId).trim();
 
+        await ensureETIndexes();
+
+        // Panel principal
+        if (typeof renderSecPanel === "function") {
+          renderSecPanel(sec);
+        }
+
+        // Panel Resumen Operativo
+        const panelResumen = document.getElementById("et27-resumen-operativo");
+        if (panelResumen) panelResumen.style.display = "block";
+
         await renderResumenOperativoSeccion(sec);
       }
 
@@ -3690,4 +3688,70 @@
 
       document.addEventListener("DOMContentLoaded", () => {
         habilitarDragResumenOperativo();
+      });
+
+      function configurarFeatureSeccion(feat, lyr) {
+        const p = feat.properties || {};
+        const muni = p[FIELD_KEYS.mun] ?? "—";
+        const dl = p[FIELD_KEYS.dl] ?? "—";
+        const df = p[FIELD_KEYS.df] ?? "—";
+
+        lyr.bindPopup(
+          `<b>Sección</b>: ${p.SECCION ?? "—"}<br><b>Mun</b>: ${muni}<br><b>DL</b>: ${dl}<br><b>DF</b>: ${df}`
+        );
+
+        lyr.on("mouseover", () => lyr.setStyle({ weight: 2 }));
+        lyr.on("mouseout", () => lyr.setStyle({ weight: 1.2 }));
+
+        lyr.on("click", async () => {
+          const sec = p.SECCION ?? p.Seccion ?? p.seccion;
+          await seleccionarSeccionET27(sec);
+        });
+      }
+
+      async function et27CalcularColorSeccion(secId) {
+        const data = await calcularResumenOperativoSeccion(secId);
+
+        const faltan = 
+          data.FALTANTES.REP_CASILLA +
+          data.FALTANTES.REP_GENERAL +
+          data.FALTANTES.OBSERVADORES;
+
+        const necesito =
+          data.NECESIDADES.REP_CASILLA +
+          data.NECESIDADES.REP_GENERAL +
+          data.NECESIDADES.OBSERVADORES;
+
+        if (necesito === 0) return "#9ca3af"; // gris
+        if (faltan === 0) return "#16a34a";   // verde
+        if (faltan < necesito) return "#f59e0b"; // amarillo
+        return "#dc2626"; // rojo
+      }
+
+      async function pintarSemaforoCobertura() {
+        const layer = window.AT_CTX?.layer;
+        if (!layer) return;
+
+        await inicializarCampoEnEstructura();
+
+        layer.eachLayer(async (lyr) => {
+          const sec = lyr.feature?.properties?.SECCION;
+          if (!sec) return;
+
+          const color = await et27CalcularColorSeccion(sec);
+
+          lyr.setStyle({
+            color: "#374151",
+            weight: 1,
+            fillColor: color,
+            fillOpacity: 0.55
+          });
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const btn = document.getElementById("btn-et27-semaforo");
+        if (btn) {
+          btn.addEventListener("click", pintarSemaforoCobertura);
+        }
       });

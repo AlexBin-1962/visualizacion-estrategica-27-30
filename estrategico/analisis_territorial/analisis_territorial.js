@@ -184,14 +184,34 @@
       function ensureLeafletMap() {
         if (window.__AT_MAP && window.__AT_MAP instanceof L.Map)
           return window.__AT_MAP;
-        const m = L.map("map", { zoomControl: true }).setView(
-          [21.0, -101.3],
-          7
-        );
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "© OSM",
-        }).addTo(m);
-        window.__AT_MAP = m;
+            const m = L.map("map", {
+
+              zoomControl: false,
+
+              zoomSnap: 0.25,
+              zoomDelta: 0.5,
+
+              wheelPxPerZoomLevel: 140,
+
+              inertia: true,
+              inertiaDeceleration: 2500,
+              inertiaMaxSpeed: 1500,
+
+              preferCanvas: true
+
+            }).setView(
+              [21.0, -101.3],
+              7
+            );
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+              attribution: "© OSM",
+            }).addTo(m);
+
+            L.control.zoom({
+              position: 'topright'
+            }).addTo(m);
+
+            window.__AT_MAP = m;
         return m;
       }
       function assertIsLeafletMap(m) {
@@ -345,31 +365,39 @@
           b2[3] < b1[1]
         );
       }
-      function getAdjacents(feat) {
+      function getAdjacents(feat){
         const all =
-          window.AT_DATA?.features ||
-          window.AT_CTX?.layer?.toGeoJSON?.()?.features ||
+          (window.AT_DATA?.features) ||
+          (window.AT_CTX?.layer?.toGeoJSON?.()?.features) ||
           [];
-        if (!all.length) return [];
-        const b1 = turf.bbox(feat);
+
+        if (!all.length || !feat) return [];
+
+        const sec1 = String(feat.properties?.SECCION ?? '').trim();
         const out = [];
-        const sec1 = feat.properties?.SECCION;
-        for (const f of all) {
+
+        let buffer = null;
+        try {
+          buffer = turf.buffer(feat, 0.00008, { units: 'degrees' });
+        } catch (e) {
+          console.warn('[AT] No se pudo crear buffer para adyacencias:', e);
+          return [];
+        }
+
+        for (const f of all){
           const p = f.properties || {};
-          if (p.SECCION === sec1) continue;
-          const b2 = turf.bbox(f);
-          if (!bboxIntersects(b1, b2)) continue;
+          const sec2 = String(p.SECCION ?? '').trim();
+
+          if (!sec2 || sec2 === sec1) continue;
+
           try {
-            if (
-              turf.booleanTouches(feat, f) ||
-              turf.booleanOverlap(feat, f) ||
-              turf.booleanIntersects(feat, f)
-            ) {
+            if (turf.booleanIntersects(buffer, f)) {
               out.push(f);
             }
-          } catch (_) {}
+          } catch(_){}
         }
-        return out.slice(0, 25); // cota de seguridad
+
+        return out.slice(0, 25);
       }
 
       // ====== LABELS SOBRE EL MAPA ======
@@ -377,7 +405,13 @@
         try {
           const c = turf.centerOfMass(feat).geometry.coordinates; // [lon, lat]
           const m = L.marker([c[1], c[0]], {
-            icon: L.divIcon({ className, html: text, iconSize: [0, 0] }),
+            icon: L.divIcon({
+              className: className,
+              html:'Seccion '+ String(text),
+              iconSize: null,
+              iconAnchor: [0, 0]
+            }),
+            interactive: false
           });
           window.__SEC_LABELS =
             window.__SEC_LABELS || L.layerGroup().addTo(ensureLeafletMap());
@@ -424,6 +458,7 @@
 
         // adyacentes
         const adj = getAdjacents(feat);
+        console.log('[AT] Adyacentes detectadas:', adj.length, adj.map(f => f.properties?.SECCION));
         if (adj.length) {
           window.__SEC_ADJ = L.geoJSON(
             { type: "FeatureCollection", features: adj },
@@ -440,7 +475,7 @@
 
         // labels
         const sec = feat.properties?.SECCION ?? "—";
-        addLabelForFeature(feat, "sec-label", `Sección ${sec}`);
+        addLabelForFeature(feat, "sec-label", ` ${sec}`);
         for (const f of adj) {
           const s2 = f.properties?.SECCION ?? "—";
           addLabelForFeature(f, "sec-label-adj", s2);
@@ -4246,9 +4281,9 @@
           });
 
         document.getElementById("btn-ayuda")?.addEventListener("click", () => {
-          document
-            .getElementById("mini-ayuda-AT")
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          if (typeof AT27_AT_HELP_open === "function") {
+            AT27_AT_HELP_open();
+          }
         });
 
         document
@@ -4577,6 +4612,31 @@
           el.style.right = "auto";
         }
       }
+
+      (function wireCompactToolbar(){
+          const btn = document.getElementById('btn-ttb-compact-toggle');
+          const bar = document.getElementById('top-toolbar');
+
+          if (!btn || !bar || btn.__wiredCompact) return;
+
+          btn.addEventListener('click', () => {
+            bar.classList.toggle('ttb-compact');
+
+            const compacta = bar.classList.contains('ttb-compact');
+            localStorage.setItem('AT_TTB_COMPACT', compacta ? '1' : '0');
+
+            btn.title = compacta ? 'Expandir barra' : 'Compactar barra';
+            btn.innerHTML = compacta ? '⟩' : '⟨';
+          });
+
+          if (localStorage.getItem('AT_TTB_COMPACT') === '1') {
+            bar.classList.add('ttb-compact');
+            btn.title = 'Expandir barra';
+            btn.innerHTML = '⟩';
+          }
+
+          btn.__wiredCompact = true;
+        })();
 
       // Cableado del botón de ayuda (busca id estándar o alterno)
       (function wireAT_Help() {

@@ -128,7 +128,7 @@
 
   // ====== CARGA ELECTORAL (para obtener 24DL_LN) ======
   function getPaths(){ try{ return JSON.parse(localStorage.getItem('AT_PATHS')||'{}'); }catch{ return {}; } }
-  function getPuestoPath(p){ const paths = getPaths(); return paths?.electoral?.[p] || `data/electoral/${p}.json`; }
+  function getPuestoPath(p){ const paths = getPaths(); return paths?.electoral?.[p] || `../data/electoral/${p}.json`; }
 
   window.AT_ELECT = window.AT_ELECT || {};
   async function getElectData(puesto){
@@ -668,7 +668,7 @@
     window.AT_CTX = { ...(window.AT_CTX||{}), universe: u2, layer: layer2 };
     // 3) Header
     const hdr = document.querySelector('#panel-header span');
-    if(hdr){ hdr.textContent = `Análisis Territorial · ${u2.label}`; }
+    if(hdr){ hdr.textContent = `Dia "D" · ${u2.label}`; }
       refreshSectionSearch(u2);
     }
     function initMiniSelector(raw, u){
@@ -925,11 +925,10 @@
         input.addEventListener('keydown', (ev)=>{
           if (ev.key === 'Enter'){
             ev.preventDefault(); // <- evita submit/autocomplete
-            const results = searchSections(input.value, 1);
-        const needle = currentNeedle(input.value);
-        const [first] = searchSections(needle, 1);
-        if (first) gotoSection(first);
-        ul.style.display = 'none';
+            const needle = currentNeedle(input.value);
+            const [first] = searchSections(needle, 1);
+            if (first) gotoSection(first);
+            ul.style.display = 'none';
        }
           if (ev.key === 'Escape'){
             ul.style.display = 'none';

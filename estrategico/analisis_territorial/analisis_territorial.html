@@ -21,6 +21,9 @@
         <!-- <img src="../assets/img/logo.png" alt="Logo"/> -->
         <span>Análisis Territorial</span>
       </div>
+      <div id="atScopeBadge" class="scope-badge" aria-live="polite">
+        UNIVERSO: —
+      </div>
       <!-- Aquí va el contenido del panel lateral -->
 
       <!-- Buscador de secciones -->
@@ -48,7 +51,12 @@
               border-radius: 6px;
             "
           />
-
+        </div>
+        <div style="margin-top: 10px; display:flex; align-items:center; gap:8px; font-size:13px; color:#334155;">
+          <label style="display:inline-flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="sec-global" />
+            Búsqueda global
+          </label>
         </div>
         <ul
           id="sec-suggest"
@@ -247,6 +255,14 @@
             <option value="DL">Diputado Local</option>
             <option value="A">Ayuntamiento</option>
           </select>
+          <label for="hist-year" style="display:inline-flex; align-items:center; gap:6px; margin-left:12px; font-size:13px; color:#37474f;">
+            Año
+            <select id="hist-year" style="border:1px solid #94a3b8; border-radius:6px; padding:4px 8px;">
+              <option value="2024">2024</option>
+              <option value="2021">2021</option>
+              <option value="2018">2018</option>
+            </select>
+          </label>
           <button id="hist-close" class="btn-close" aria-label="Cerrar">
             ×
           </button>

@@ -811,8 +811,8 @@
 
       .et27-resumen-operativo {
         position: fixed;
-        right: 24px;
-        top: 90px;
+        left: 24px;
+        top: 600px;
         width: 430px;
         max-width: calc(100vw - 48px);
         z-index: 5200;
