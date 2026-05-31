@@ -8199,18 +8199,6 @@
           </div>
         </details>
 
-        <!-- Participación histórica → 2027* (opcional) -->
-        <details style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">
-          <summary style="cursor:pointer; font-weight:700;">Participación 2018/2021/2024 → 2027*</summary>
-          <div style="margin-top:8px; font-size:13px; color:#334155;">
-            <b>Qué muestra:</b> mapa por rangos de participación histórica y proyección 2027*:
-            &lt;30% rojo, 30–50% amarillo, &gt;50% verde.<br>
-            <b>Cómo leerlo:</b> detecta secciones estructuralmente bajas para reforzar movilización.
-          </div>
-        </details>
-
-
-
 
       <!-- 1) Probabilidad de voltear 2027 -->
       <details style="margin:8px 0; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px;">

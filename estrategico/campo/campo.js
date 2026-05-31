@@ -2572,6 +2572,17 @@ async function ofLoadRoadNetwork(){
         of$("of-btn-descargar-resumen")?.addEventListener("click", ofDownloadResumenCSV);
         of$("of-btn-red-vial")?.addEventListener("click", ofToggleRoadNetwork);
 
+        // Limpiar ruta previamente generada en la vista de oficina
+        of$("btn-oficina-limpiar-ruta")?.addEventListener("click", () => {
+          try {
+            ofClearRouteLayer();
+            ofMsg("🧹 Ruta limpiada.");
+          } catch (e) {
+            console.warn('[OFICINA] Error al limpiar ruta:', e);
+            ofMsg('⚠️ No se pudo limpiar la ruta.');
+          }
+        });
+
         (function initBotonRutaInteligenteOF(){
           const btn = document.getElementById("btn-oficina-ruta-inteligente");
           if (!btn) return;
