@@ -95,12 +95,12 @@
     .mini{ background:#eef2f7; border-top:1px solid #cbd5e1; padding:12px; }
     .mini .row{ margin-bottom:8px; }
 
-    #q-suggest{
+    #sec-suggest{
       position: relative; max-height: 220px; overflow:auto;
       background:#fff; border:1px solid #cbd5e1; border-radius:6px;
       display:none; z-index:3000;
     }
-    #q-suggest li{ padding:6px 8px; border-bottom:1px solid #eef2f7; cursor:pointer; }
-    #q-suggest li:hover{ background:#f8fafc; }
+    #sec-suggest li{ padding:6px 8px; border-bottom:1px solid #eef2f7; cursor:pointer; }
+    #sec-suggest li:hover{ background:#f8fafc; }
 
   

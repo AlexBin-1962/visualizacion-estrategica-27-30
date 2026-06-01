@@ -14,30 +14,90 @@
   <div id="panel-lateral">
     <div id="panel-header">Socioeconómico</div>
 
-  <!-- UNIVERSO (arriba) -->
-  <div class="card mini" id="universo">
-    <div class="row" style="flex-direction:row; gap:6px;">
-      <input id="q-seccion" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Buscar sección (ej. 1234)"/>
-      <button class="btn" id="btn-ir-sec">Ir</button>
-    </div>
-    <ul id="q-suggest" style="margin:6px 0 0; padding:0; list-style:none;"></ul>
+      <!-- Buscador de secciones -->
+      <div
+        id="sec-search"
+        style="
+          padding: 10px 12px;
+          border-top: 1px solid #cbd5e1;
+          background: #eef2f7;
+        "
+      >
+        <div style="display: flex; gap: 8px; align-items: center">
+          <input
+            id="sec-q"
+            type="text"
+            placeholder="Buscar sección (ej. 1234 o '1234 León')"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="search"
+            style="
+              flex: 1;
+              padding: 6px 8px;
+              border: 1px solid #94a3b8;
+              border-radius: 6px;
+            "
+          />
+        </div>
+        <div style="margin-top: 10px; display:flex; align-items:center; gap:8px; font-size:13px; color:#334155;">
+          <label style="display:inline-flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="sec-global" />
+            Búsqueda global
+          </label>
+        </div>
+        <ul
+          id="sec-suggest"
+          style="
+            margin: 8px 0 0 0;
+            padding: 0;
+            list-style: none;
+            max-height: 180px;
+            overflow: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            display: none;
+          "
+        ></ul>
+      </div>
 
-
-    <div class="row"><label><input type="checkbox" id="mini-all"> Estado completo</label></div>
-
-    <div class="row">
-      <label>Municipio</label>
-      <select id="mini-mun"><option value="">— Ninguno —</option></select>
-    </div>
-    <div class="row">
-      <label>Distrito Federal</label>
-      <select id="mini-df"><option value="">— Ninguno —</option></select>
-    </div>
-    <div class="row">
-      <label>Distrito Local</label>
-      <select id="mini-dl"><option value="">— Ninguno —</option></select>
-    </div>
-  </div>
+      <div
+        id="mini-universe"
+        style="
+          padding: 12px 12px 6px 12px;
+          background: #eef2f7;
+          border-top: 1px solid #cbd5e1;
+        "
+      >
+        <div class="row" style="margin-bottom: 8px">
+          <label
+            ><input type="checkbox" id="mini-all-state" /> Estado
+            completo</label
+          >
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Municipio</label>
+          <select id="mini-sel-mun" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Federal</label>
+          <select id="mini-sel-df" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom: 8px">
+          <label>Distrito Local</label>
+          <select id="mini-sel-dl" style="width: 100%; padding: 6px">
+            <option value="">— Ninguno —</option>
+          </select>
+        </div>
+        <div class="hint" style="font-size: 12px; color: #64748b">
+          Elige solo uno. Al cambiar, el mapa se actualiza.
+        </div>
+      </div>
 
   
 

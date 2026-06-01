@@ -187,14 +187,16 @@
       const c = turf.centerOfMass(feat).geometry.coordinates; // [lon, lat]
       const icon = L.divIcon({
         className: className,
-        html: text,
+        html: 'Seccion ' + String(text),
+        iconSize: null,
         iconAnchor: [0, 0],   // se centra con transform en CSS
       });
-      const m = L.marker([c[1], c[0]], { icon });
+      const m = L.marker([c[1], c[0]], { icon, interactive: false });
       window.__SEC_LABELS = window.__SEC_LABELS || L.layerGroup().addTo(ensureLeafletMap());
       window.__SEC_LABELS.addLayer(m);
       return m;
-    } catch(_){}
+    } catch(_){
+    }
     return null;
   }
 
@@ -222,7 +224,7 @@
 
     // labels
     const sec = feat.properties?.SECCION ?? '—';
-    addLabelForFeature(feat, 'sec-label', `Sección ${sec}`);
+    addLabelForFeature(feat, 'sec-label', ` ${sec}`);
     for (const f of adj){
       const s2 = f.properties?.SECCION ?? '—';
       addLabelForFeature(f, 'sec-label-adj', s2);

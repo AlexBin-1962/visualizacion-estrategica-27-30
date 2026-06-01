@@ -1296,7 +1296,13 @@
         try {
           const c = turf.centerOfMass(feat).geometry.coordinates; // [lon, lat]
           const m = L.marker([c[1], c[0]], {
-            icon: L.divIcon({ className, html: text, iconSize: [0, 0] }),
+            icon: L.divIcon({
+              className: className,
+              html: 'Seccion ' + String(text),
+              iconSize: null,
+              iconAnchor: [0, 0],
+            }),
+            interactive: false,
           });
           window.__SEC_LABELS =
             window.__SEC_LABELS || L.layerGroup().addTo(ensureLeafletMap());
@@ -1359,7 +1365,7 @@
 
         // labels
         const sec = feat.properties?.SECCION ?? "—";
-        addLabelForFeature(feat, "sec-label", `Sección ${sec}`);
+        addLabelForFeature(feat, "sec-label", ` ${sec}`);
         for (const f of adj) {
           const s2 = f.properties?.SECCION ?? "—";
           addLabelForFeature(f, "sec-label-adj", s2);

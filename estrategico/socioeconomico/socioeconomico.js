@@ -144,7 +144,7 @@
       sel.innerHTML = '<option value="">— Ninguno —</option>' + arr.map(v => `<option value="${v}">${v}</option>`).join('');
     }
     function labelMunicipiosFromCatalog(){
-      const sel = document.getElementById('mini-mun');
+      const sel = document.getElementById('mini-sel-mun');
       if (!sel) return;
       for (const opt of sel.options){
         if (!opt.value) continue;
@@ -154,10 +154,10 @@
     }
     function getMiniUniverse(){
       // leer DIRECTO del DOM (sin depender de MINI.*)
-      const all   = document.getElementById('mini-all');
-      const selMun= document.getElementById('mini-mun');
-      const selDf = document.getElementById('mini-df');
-      const selDl = document.getElementById('mini-dl');
+      const all   = document.getElementById('mini-all-state');
+      const selMun= document.getElementById('mini-sel-mun');
+      const selDf = document.getElementById('mini-sel-df');
+      const selDl = document.getElementById('mini-sel-dl');
 
       // si NO hay controles en el DOM, usa el universo guardado en Portal
       if (!all && !selMun && !selDf && !selDl){
@@ -182,10 +182,10 @@
     }
 
     function miniExclusivity(which){
-      const selMun = document.getElementById('mini-mun');
-      const selDf  = document.getElementById('mini-df');
-      const selDl  = document.getElementById('mini-dl');
-      const all    = document.getElementById('mini-all');
+      const selMun = document.getElementById('mini-sel-mun');
+      const selDf  = document.getElementById('mini-sel-df');
+      const selDl  = document.getElementById('mini-sel-dl');
+      const all    = document.getElementById('mini-all-state');
 
       if (which==='ALL'){ if(selMun) selMun.value=''; if(selDf) selDf.value=''; if(selDl) selDl.value=''; }
       if (which==='MUN'){ if(selDf) selDf.value=''; if(selDl) selDl.value=''; if(all) all.checked=false; }
@@ -196,10 +196,10 @@
 
 
     async function initMini(raw,u){
-      MINI.selMun = document.getElementById('mini-mun');
-      MINI.selDf  = document.getElementById('mini-df');
-      MINI.selDl  = document.getElementById('mini-dl');
-      MINI.all    = document.getElementById('mini-all');
+      MINI.selMun = document.getElementById('mini-sel-mun');
+      MINI.selDf  = document.getElementById('mini-sel-df');
+      MINI.selDl  = document.getElementById('mini-sel-dl');
+      MINI.all    = document.getElementById('mini-all-state');
       const opt = buildMiniOptions(raw);
       fillSel(MINI.selMun, opt.mun);
       fillSel(MINI.selDf,  opt.df);
@@ -473,7 +473,7 @@
       window.RAW = raw;                            // cachea
       const geo = filterGeo(raw, u);
 
-      const q = document.getElementById('q-seccion')?.value?.trim();
+      const q = document.getElementById('sec-q')?.value?.trim();
       if (!q) return;
 
       const code = String(q).replace(/\D+/g,'');
@@ -489,8 +489,7 @@
       try { m.fitBounds(window.HILITE.getBounds(), { padding:[20,20] }); } catch {}
     };
 
-    document.getElementById('btn-ir-sec')?.addEventListener('click', () => { goSec(); });
-    document.getElementById('q-seccion')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') goSec(); });
+    document.getElementById('sec-q')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') goSec(); });
 
       document.getElementById('controls-close')?.addEventListener('click', ()=>{
         document.getElementById('controls')?.style && (document.getElementById('controls').style.display='none');
@@ -559,7 +558,7 @@
     }
 
     function renderSuggest(list){
-      const ul = document.getElementById('q-suggest'); if(!ul) return;
+      const ul = document.getElementById('sec-suggest'); if(!ul) return;
       if (!list.length){ ul.style.display='none'; ul.innerHTML=''; return; }
       ul.innerHTML = list.map(it=>{
         const meta = [
@@ -588,9 +587,8 @@
 
     /* ——— cableado UI ——— */
     function wireSuggest(){
-      const input = document.getElementById('q-seccion');
-      const ul    = document.getElementById('q-suggest');
-      const btn   = document.getElementById('btn-ir-sec');
+      const input = document.getElementById('sec-q');
+      const ul    = document.getElementById('sec-suggest');
       if (!input || !ul) return;
 
       input.addEventListener('input', ()=> renderSuggest(searchSecs(input.value, 15)));
@@ -609,10 +607,7 @@
         if (it){ gotoSectionFromItem(it); }
         ul.style.display='none';
       });
-      btn?.addEventListener('click', ()=>{
-        const [first] = searchSecs(input.value, 1);
-        if (first){ gotoSectionFromItem(first); ul.style.display='none'; }
-      });
+      // No button handler needed; Enter key triggers search.
       input.addEventListener('blur', ()=> setTimeout(()=> ul.style.display='none', 120));
     }
 
@@ -686,7 +681,7 @@
     const _old_goSec = window.goSec;
     window.goSec = async function(){
       if (_old_goSec) await _old_goSec();  // deja que tu función resalte y haga fitBounds
-      const q = document.getElementById('q-seccion')?.value?.trim();
+      const q = document.getElementById('sec-q')?.value?.trim();
       if (q) showSectionLabel(q);
     };
 

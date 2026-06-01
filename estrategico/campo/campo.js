@@ -224,26 +224,34 @@
           window.AT_DATA?.features ||
           window.AT_CTX?.layer?.toGeoJSON?.()?.features ||
           [];
-        if (!all.length) return [];
-        const b1 = turf.bbox(feat);
+
+        if (!all.length || !feat) return [];
+
+        const sec1 = String(feat.properties?.SECCION ?? '').trim();
         const out = [];
-        const sec1 = feat.properties?.SECCION;
+
+        let buffer = null;
+        try {
+          buffer = turf.buffer(feat, 0.00008, { units: 'degrees' });
+        } catch (e) {
+          console.warn('[AT] No se pudo crear buffer para adyacencias:', e);
+          return [];
+        }
+
         for (const f of all) {
           const p = f.properties || {};
-          if (p.SECCION === sec1) continue;
-          const b2 = turf.bbox(f);
-          if (!bboxIntersects(b1, b2)) continue;
+          const sec2 = String(p.SECCION ?? '').trim();
+
+          if (!sec2 || sec2 === sec1) continue;
+
           try {
-            if (
-              turf.booleanTouches(feat, f) ||
-              turf.booleanOverlap(feat, f) ||
-              turf.booleanIntersects(feat, f)
-            ) {
+            if (turf.booleanIntersects(buffer, f)) {
               out.push(f);
             }
           } catch (_) {}
         }
-        return out.slice(0, 25); // cota de seguridad
+
+        return out.slice(0, 25);
       }
 
       // ====== LABELS SOBRE EL MAPA ======
@@ -251,7 +259,13 @@
         try {
           const c = turf.centerOfMass(feat).geometry.coordinates; // [lon, lat]
           const m = L.marker([c[1], c[0]], {
-            icon: L.divIcon({ className, html: text, iconSize: [0, 0] }),
+            icon: L.divIcon({
+              className: className,
+              html: 'Seccion ' + String(text),
+              iconSize: null,
+              iconAnchor: [0, 0],
+            }),
+            interactive: false,
           });
           window.__SEC_LABELS =
             window.__SEC_LABELS || L.layerGroup().addTo(ensureLeafletMap());
@@ -315,7 +329,7 @@
 
         // labels
         const sec = feat.properties?.SECCION ?? "—";
-        addLabelForFeature(feat, "sec-label", `Sección ${sec}`);
+        addLabelForFeature(feat, "sec-label", ` ${sec}`);
         for (const f of adj) {
           const s2 = f.properties?.SECCION ?? "—";
           addLabelForFeature(f, "sec-label-adj", s2);
